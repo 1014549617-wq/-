@@ -121,19 +121,27 @@ export default function Monitor() {
   }
 
   return (
-    <div className="min-h-screen bg-monitorBg text-textWhite font-mono relative overflow-hidden">
+    <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden">
       {/* 噪点 */}
       <div className="monitor-grain" />
 
       {/* 顶部状态栏 */}
-      <header className="p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center text-xs text-phosphorGreen gap-2">
-        <div className="truncate">SYS_STATUS: ACTIVE // CAM-01 (ROOM_DEPRIVATION)</div>
+      <header className="p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center font-pixel text-[8px] text-phosphorGreen gap-2">
+        <div className="truncate">SYS_STATUS: ACTIVE // CAM-01</div>
         <div className="flex items-center gap-2">
           <span className="text-alertRed rec-pulse">●</span>
           <span className="text-alertRed">REC</span>
         </div>
         <div id="live-clock" className="tabular-nums">{clock}</div>
       </header>
+
+      {/* 100天进度红线 */}
+      <div className="w-full h-[2px] bg-monitorGlass relative">
+        <div 
+          className="absolute left-0 top-0 h-full bg-alertRed/60 transition-all duration-1000"
+          style={{ width: `${(currentDay / 100) * 100}%` }}
+        />
+      </div>
 
       {/* 主内容 */}
       <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
@@ -144,53 +152,57 @@ export default function Monitor() {
             {items.map((item, idx) => (
               <div key={item.id} className="flex flex-col items-center gap-1 fade-in-up" style={{ animationDelay: `${idx * 0.3}s` }}>
                 {itemSVGs[item.slug] || (
-                  <div className="w-12 h-12 border border-phosphorGreen/30 rounded flex items-center justify-center text-[8px] text-phosphorGreen/40">
+                  <div className="w-12 h-12 border border-phosphorGreen/30 rounded flex items-center justify-center font-pixel text-[7px] text-phosphorGreen/40">
                     {item.slug?.slice(0, 3).toUpperCase()}
                   </div>
                 )}
-                <span className="text-[9px] text-phosphorGreen/30">{item.name}</span>
+                <span className="font-pixel text-[7px] text-phosphorGreen/30">{item.name}</span>
               </div>
             ))}
             {items.length === 0 && (
-              <div className="text-phosphorGreen/20 text-xs">[ 房间为空 · 等待第一件物品坠入 ]</div>
+              <div className="font-pixel text-[8px] text-phosphorGreen/20">[ 房间为空 ]</div>
             )}
           </div>
 
           {/* 悬浮指示 */}
-          <div className="absolute top-3 right-4 text-[10px] text-phosphorGreen/40">
-            SYSTEM_LOG: DAY_{String(currentDay).padStart(3, '0')}
+          <div className="absolute top-3 right-4 font-pixel text-[7px] text-phosphorGreen/40">
+            DAY_{String(currentDay).padStart(3, '0')}
           </div>
-          <div className="absolute bottom-3 left-4 text-[9px] text-phosphorGreen/20">
-            ITEMS_IN_ROOM: {items.length}
+          <div className="absolute bottom-3 left-4 font-pixel text-[7px] text-phosphorGreen/20">
+            ITEMS: {items.length}
+          </div>
+          {/* REC 时间戳水印 */}
+          <div className="absolute bottom-3 right-4 font-pixel text-[7px] text-phosphorGreen/15">
+            REC {clock}
           </div>
         </div>
 
         {/* 今日现实行动契约面板 */}
         <section className="border border-phosphorGreen/30 bg-monitorGlass/50 p-5 md:p-6 space-y-4 rounded">
-          <div className="text-[10px] text-phosphorGreen uppercase tracking-[0.3em]">// 今日现实指令 //</div>
+          <div className="font-pixel text-[8px] text-phosphorGreen uppercase tracking-[0.2em]">// 今日现实指令 //</div>
           {todayAction ? (
             <>
-              <h2 className="text-lg md:text-xl font-bold text-textWhite">{todayAction.action_title}</h2>
-              <p className="text-sm text-textWhite/80 leading-relaxed indent-8">
+              <h2 className="font-pixel text-sm md:text-base text-textWhite leading-relaxed">{todayAction.action_title}</h2>
+              <p className="text-lg text-textWhite/80 leading-relaxed indent-8">
                 {todayAction.action_command}
               </p>
             </>
           ) : (
-            <div className="text-phosphorGreen/30 text-sm">[ 等待指令加载... ]</div>
+            <div className="font-pixel text-[8px] text-phosphorGreen/30">[ 等待指令加载... ]</div>
           )}
         </section>
 
         {/* 明日投票区 */}
         <section className="border border-phosphorGreen/30 bg-monitorGlass/50 p-5 md:p-6 space-y-4 rounded">
           <div className="flex items-center justify-between">
-            <div className="text-[10px] text-phosphorGreen uppercase tracking-[0.3em]">// 明日博弈 · 三选一 //</div>
-            <Link to="/confessional" className="text-[10px] text-phosphorGreen/50 hover:text-phosphorGreen transition-colors">
+            <div className="font-pixel text-[8px] text-phosphorGreen uppercase tracking-[0.2em]">// 明日博弈 · 三选一 //</div>
+            <Link to="/confessional" className="font-pixel text-[7px] text-phosphorGreen/50 hover:text-phosphorGreen transition-colors">
               告解室 →
             </Link>
           </div>
 
           {voted ? (
-            <div className="text-xs text-phosphorGreen/60 py-4 text-center">
+            <div className="font-pixel text-[8px] text-phosphorGreen/60 py-4 text-center">
               [ 今日投票已提交 · 等待 00:00 结算 ]
             </div>
           ) : (
@@ -204,16 +216,16 @@ export default function Monitor() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-[10px] text-phosphorGreen/40 mb-1">物品 {idx + 1}</div>
-                      <div className="text-sm text-textWhite group-hover:text-phosphorGreen transition-colors">
+                      <div className="font-pixel text-[7px] text-phosphorGreen/40 mb-1">物品 {idx + 1}</div>
+                      <div className="text-base text-textWhite group-hover:text-phosphorGreen transition-colors">
                         {choice.name}
                       </div>
-                      <div className="text-xs text-textWhite/50 mt-1">
+                      <div className="font-pixel text-[8px] text-textWhite/50 mt-1">
                         {choice.action_title}
                       </div>
                     </div>
-                    <div className="text-[10px] text-phosphorGreen/20 shrink-0">
-                      {choice.votes || 0} 票
+                    <div className="font-pixel text-[7px] text-phosphorGreen/20 shrink-0">
+                      {choice.votes || 0}票
                     </div>
                   </div>
                 </button>

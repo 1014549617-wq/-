@@ -14,7 +14,9 @@ export default {
         textWhite: '#e5e7eb',
       },
       fontFamily: {
-        mono: ['"Courier New"', 'Consolas', 'monospace'],
+        pixel: ['"Press Start 2P"', 'monospace'],
+        terminal: ['"VT323"', 'monospace'],
+        mono: ['"VT323"', '"Courier New"', 'Consolas', 'monospace'],
       },
     },
   },

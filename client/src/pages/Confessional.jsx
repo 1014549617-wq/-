@@ -69,13 +69,13 @@ export default function Confessional() {
   }
 
   return (
-    <div className="min-h-screen bg-monitorBg text-textWhite font-mono relative overflow-hidden">
+    <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden">
       {/* 噪点 */}
       <div className="monitor-grain" />
 
       {/* 顶部状态栏 */}
-      <header className="p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center text-xs text-phosphorGreen gap-2">
-        <div>SYS_STATUS: ACTIVE // DARKROOM_CONSOLE</div>
+      <header className="p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center font-pixel text-[8px] text-phosphorGreen gap-2">
+        <div>SYS_STATUS: ACTIVE // DARKROOM</div>
         <div className="flex items-center gap-2">
           <span className="text-alertRed rec-pulse">●</span>
           <span className="text-alertRed">REC</span>
@@ -85,15 +85,15 @@ export default function Confessional() {
 
       <main className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
         {/* 导航 */}
-        <div className="flex items-center gap-4 text-[10px] text-phosphorGreen/40">
+        <div className="flex items-center gap-4 font-pixel text-[7px] text-phosphorGreen/40">
           <Link to="/monitor" className="hover:text-phosphorGreen transition-colors">← 监视器</Link>
-          <span className="tracking-[0.3em] uppercase">// The Darkroom 告解室 //</span>
+          <span className="tracking-[0.2em] uppercase">// The Darkroom //</span>
         </div>
 
         {/* 规则说明 */}
         <div className="border border-phosphorGreen/20 bg-monitorGlass/30 p-4 rounded space-y-2">
-          <div className="text-[10px] text-phosphorGreen uppercase tracking-[0.3em]">// 等价交换法则 //</div>
-          <p className="text-xs text-textWhite/50 leading-relaxed">
+          <div className="font-pixel text-[8px] text-phosphorGreen uppercase tracking-[0.2em]">// 等价交换法则 //</div>
+          <p className="text-base text-textWhite/50 leading-relaxed">
             你想要查看他人的现实反馈，或为明日的禁令投票？你必须先交出自己的秘密。
             没有筹码，就没有窥视的权力。你的告解不少于 30 字，以示诚意。
           </p>
@@ -102,17 +102,17 @@ export default function Confessional() {
         {/* 告解输入区 */}
         {!hasAuthority ? (
           <div className="border border-phosphorGreen/30 bg-monitorGlass/50 p-5 rounded space-y-4">
-            <div className="text-[10px] text-phosphorGreen/40 tracking-widest">[ 交出你的秘密 ]</div>
+            <div className="font-pixel text-[8px] text-phosphorGreen/40 tracking-widest">[ 交出你的秘密 ]</div>
             <textarea
               value={confession}
               onChange={e => setConfession(e.target.value)}
               placeholder="在这里写下你今天被剥去的、或主动交出的东西。不要低于 30 字——你的痛苦或渴望，需要更具体的陈述。"
-              className="w-full h-36 bg-monitorBg border border-phosphorGreen/20 rounded p-3 text-sm text-textWhite/80
-                         placeholder:text-phosphorGreen/20 focus:outline-none focus:border-phosphorGreen/50
+              className="w-full h-36 bg-monitorBg border border-phosphorGreen/20 rounded p-3 text-base text-textWhite/80
+                         placeholder:text-phosphorGreen/20 placeholder:font-terminal focus:outline-none focus:border-phosphorGreen/50
                          transition-colors resize-none"
             />
             <div className="flex items-center justify-between">
-              <div className="text-[9px] text-phosphorGreen/30">
+              <div className="font-pixel text-[7px] text-phosphorGreen/30">
                 {confession.trim().length < 30
                   ? `筹码不足 · 还需 ${30 - confession.trim().length} 字`
                   : '筹码充足 · 可以提交'}
@@ -120,7 +120,7 @@ export default function Confessional() {
               <button
                 onClick={handleSubmit}
                 disabled={confession.trim().length < 30 || submitting}
-                className={`px-6 py-2 text-[10px] tracking-[0.2em] uppercase border rounded transition-all duration-300
+                className={`font-pixel text-[8px] px-6 py-2 tracking-[0.2em] uppercase border rounded transition-all duration-300
                   ${confession.trim().length >= 30
                     ? 'border-phosphorGreen/50 text-phosphorGreen hover:bg-phosphorGreen/10'
                     : 'border-phosphorGreen/10 text-phosphorGreen/20 cursor-not-allowed'}`}
@@ -132,11 +132,11 @@ export default function Confessional() {
         ) : (
           <div className="border border-phosphorGreen/20 bg-monitorGlass/30 p-4 rounded">
             {submitted ? (
-              <div className="text-xs text-phosphorGreen/60 text-center py-2">
-                [ 秘密已上交 · 你获得了今日的窥视权 ]
+              <div className="font-pixel text-[8px] text-phosphorGreen/60 text-center py-2">
+                [ 秘密已上交 · 窥视权已激活 ]
               </div>
             ) : (
-              <div className="text-xs text-phosphorGreen/60 text-center py-2">
+              <div className="font-pixel text-[8px] text-phosphorGreen/60 text-center py-2">
                 [ 今日窥视权已激活 ]
               </div>
             )}
@@ -146,7 +146,7 @@ export default function Confessional() {
         {/* 告解墙 */}
         {hasAuthority && (
           <div className="space-y-3">
-            <div className="text-[10px] text-phosphorGreen/40 tracking-widest uppercase">// 他人告解 · 随机抽样 //</div>
+            <div className="font-pixel text-[7px] text-phosphorGreen/40 tracking-widest uppercase">// 他人告解 · 随机抽样 //</div>
 
             {wallItems.map((item, idx) => (
               <div
@@ -154,10 +154,10 @@ export default function Confessional() {
                 className="border border-phosphorGreen/15 bg-monitorGlass/30 p-4 rounded fade-in-up"
                 style={{ animationDelay: `${idx * 0.2}s` }}
               >
-                <p className="text-sm text-textWhite/70 leading-relaxed indent-6">
+                <p className="text-base text-textWhite/70 leading-relaxed indent-6">
                   {item.content}
                 </p>
-                <div className="mt-3 flex justify-between text-[9px] text-phosphorGreen/20">
+                <div className="mt-3 flex justify-between font-pixel text-[7px] text-phosphorGreen/20">
                   <span>ANON_#{String(item.id).padStart(4, '0')}</span>
                   <span>{item.time}</span>
                 </div>
@@ -165,7 +165,7 @@ export default function Confessional() {
             ))}
 
             {wallItems.length === 0 && (
-              <div className="text-phosphorGreen/20 text-xs text-center py-8">
+              <div className="font-pixel text-[8px] text-phosphorGreen/20 text-center py-8">
                 [ 暂无告解记录 ]
               </div>
             )}
@@ -175,8 +175,8 @@ export default function Confessional() {
         {/* 自己的最后一条告解 */}
         {localStorage.getItem('my_last_confession') && (
           <div className="border border-alertRed/20 bg-monitorGlass/30 p-4 rounded space-y-2">
-            <div className="text-[9px] text-alertRed/40 tracking-widest uppercase">// 你最后的告解 //</div>
-            <p className="text-xs text-textWhite/40 leading-relaxed italic">
+            <div className="font-pixel text-[7px] text-alertRed/40 tracking-widest uppercase">// 你最后的告解 //</div>
+            <p className="text-sm text-textWhite/40 leading-relaxed italic">
               "{localStorage.getItem('my_last_confession')}"
             </p>
           </div>
