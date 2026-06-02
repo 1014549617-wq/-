@@ -13,6 +13,13 @@ export default function Monitor() {
   const [gazeTimer, setGazeTimer] = useState(5)
   const [clock, setClock] = useState('')
   const [showGlitch, setShowGlitch] = useState(false)
+  const [viewCount, setViewCount] = useState(0)
+
+  // 获取本地日期字符串（避免 UTC 时区 bug）
+  const getLocalDate = () => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
 
   // 实时时钟
   useEffect(() => {
@@ -37,13 +44,14 @@ export default function Monitor() {
         setItems(data.unlocked_items || [])
         setTodayAction(data.today_action)
         // 合并后端基础票数 + 本地持久化增量
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getLocalDate()
         const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
         const mergedChoices = (data.today_choices || []).map(c => ({
           ...c,
           votes: (c.votes || 0) + (localVotes[c.id] || 0)
         }))
         setChoices(mergedChoices)
+        setViewCount(data.view_count || 0)
       })
       .catch(() => {
         setCurrentDay(1)
@@ -60,7 +68,7 @@ export default function Monitor() {
       })
 
     const votedDay = localStorage.getItem('voted_day')
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalDate()
     if (votedDay === today) {
       setVoted(true)
       setVotedChoice(parseInt(localStorage.getItem('voted_choice') || '0'))
@@ -101,7 +109,7 @@ export default function Monitor() {
     } catch (e) { /* 静默 */ }
 
     // 本地持久化：记录投票 + 票数增量
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalDate()
     localStorage.setItem('voted_day', today)
     localStorage.setItem('voted_choice', String(choiceId))
     const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
@@ -189,9 +197,12 @@ export default function Monitor() {
       {/* 顶部状态栏 */}
       <header className="p-3 md:p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center font-pixel text-[7px] md:text-[8px] text-phosphorGreen gap-2">
         <div className="truncate">SYS: ACTIVE // CAM-01</div>
-        <div className="flex items-center gap-2">
-          <span className="text-alertRed rec-pulse">●</span>
-          <span className="text-alertRed">REC</span>
+        <div className="flex items-center gap-3">
+          <span className="text-phosphorGreen/30">👁 {viewCount}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-alertRed rec-pulse">●</span>
+            <span className="text-alertRed">REC</span>
+          </div>
         </div>
         <div className="tabular-nums">{clock}</div>
       </header>

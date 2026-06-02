@@ -9,6 +9,12 @@ export default function Confessional() {
   const [submitted, setSubmitted] = useState(false)
   const [clock, setClock] = useState('')
 
+  // 获取本地日期字符串（避免 UTC 时区 bug）
+  const getLocalDate = () => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
   // 实时时钟
   useEffect(() => {
     const tick = () => {
@@ -25,7 +31,7 @@ export default function Confessional() {
 
   // 检查今日权限
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalDate()
     const authorityDate = localStorage.getItem('has_authority_date')
     if (authorityDate === today) {
       setHasAuthority(true)
@@ -72,7 +78,7 @@ export default function Confessional() {
       })
     } catch { /* 静默 */ }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalDate()
     localStorage.setItem('has_authority_date', today)
     localStorage.setItem('my_last_confession', confession.trim())
     setHasAuthority(true)

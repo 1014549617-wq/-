@@ -57,6 +57,9 @@ const seedConfessions = [
   { id: 20, content: '不设闹钟睡到自然醒。醒来发现已经十一点了。身体需要的不是七小时，是九小时。', time: '11:03' },
 ]
 
+// 内存级访问计数器（Serverless 冷启动后重置，但同一会话内有效）
+let viewCounter = 0
+
 function getCurrentDay() {
   const start = new Date('2026-06-02T00:00:00+08:00')
   const now = new Date()
@@ -64,6 +67,7 @@ function getCurrentDay() {
 }
 
 export default function handler(req, res) {
+  viewCounter++
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(200).end()
@@ -91,10 +95,15 @@ export default function handler(req, res) {
     votes: getBaseVotes(currentDay, items[idx].id)
   }))
 
+  // 浏览量 = 确定性基础数（基于天数递增） + 内存计数器
+  const baseViews = currentDay * 47 + 183
+  const viewCount = baseViews + viewCounter
+
   return res.status(200).json({
     current_day: currentDay,
     unlocked_items: unlocked,
     today_action: todayAction,
-    today_choices: choices
+    today_choices: choices,
+    view_count: viewCount
   })
 }
