@@ -1,0 +1,6 @@
+run = "npm run build && npm start"
+entrypoint = "server/server.js"
+
+[deployment]
+run = ["sh", "-c", "npm run build && npm start"]
+deploymentTarget = "cloudrun"

@@ -1,12 +1,13 @@
 {
-  "name": "deprivation-project",
+  "name": "deprivation",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Project Deprivation // 剥夺计划 - 100天现实禁闭仪式",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "cd client && npm install && npm run build",
+    "start": "NODE_ENV=production node server/server.js",
+    "dev": "cd server && node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "engines": {
+    "node": ">=18"
+  }
 }
