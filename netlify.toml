@@ -1,0 +1,16 @@
+[build]
+  # 前端构建目录
+  publish = "client/dist"
+  # 构建命令
+  command = "cd client && npm install && npm run build"
+
+[functions]
+  # Netlify Functions 目录
+  directory = "netlify/functions"
+
+# SPA 路由回退：所有非文件、非 API 请求返回 index.html
+# Netlify Functions (通过 config.path) 优先级高于 redirects，API 不会被拦截
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
