@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: deprivation
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    startCommand: cd server && NODE_ENV=production node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: true
