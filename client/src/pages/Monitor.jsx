@@ -8,8 +8,8 @@ export default function Monitor() {
   const [choices, setChoices] = useState([])
   const [voted, setVoted] = useState(false)
   const [votedChoice, setVotedChoice] = useState(null)
-  const [gazing, setGazing] = useState(false)   // 凝视倒计时中
-  const [gazeTarget, setGazeTarget] = useState(null)  // 凝视目标ID
+  const [gazing, setGazing] = useState(false)
+  const [gazeTarget, setGazeTarget] = useState(null)
   const [gazeTimer, setGazeTimer] = useState(5)
   const [clock, setClock] = useState('')
   const [showGlitch, setShowGlitch] = useState(false)
@@ -28,7 +28,7 @@ export default function Monitor() {
     return () => clearInterval(t)
   }, [])
 
-  // 加载全局状态
+  // 加载全局状态 + 恢复本地投票记录
   useEffect(() => {
     fetch('/api/state')
       .then(r => r.json())
@@ -36,7 +36,14 @@ export default function Monitor() {
         setCurrentDay(data.current_day)
         setItems(data.unlocked_items || [])
         setTodayAction(data.today_action)
-        setChoices(data.today_choices || [])
+        // 合并后端基础票数 + 本地持久化增量
+        const today = new Date().toISOString().slice(0, 10)
+        const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
+        const mergedChoices = (data.today_choices || []).map(c => ({
+          ...c,
+          votes: (c.votes || 0) + (localVotes[c.id] || 0)
+        }))
+        setChoices(mergedChoices)
       })
       .catch(() => {
         setCurrentDay(1)
@@ -64,7 +71,6 @@ export default function Monitor() {
   useEffect(() => {
     if (!gazing) return
     if (gazeTimer <= 0) {
-      // 凝视完成，执行投票
       executeVote(gazeTarget)
       return
     }
@@ -93,12 +99,23 @@ export default function Monitor() {
         body: JSON.stringify({ choice_id: choiceId })
       })
     } catch (e) { /* 静默 */ }
-    setVoted(true)
-    setVotedChoice(choiceId)
-    setGazing(false)
+
+    // 本地持久化：记录投票 + 票数增量
     const today = new Date().toISOString().slice(0, 10)
     localStorage.setItem('voted_day', today)
     localStorage.setItem('voted_choice', String(choiceId))
+    const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
+    localVotes[choiceId] = (localVotes[choiceId] || 0) + 1
+    localStorage.setItem(`votes_${today}`, JSON.stringify(localVotes))
+
+    // 更新本地状态
+    setVoted(true)
+    setVotedChoice(choiceId)
+    setGazing(false)
+    setGazing(false)
+    setChoices(prev => prev.map(c =>
+      c.id === choiceId ? { ...c, votes: (c.votes || 0) + 1 } : c
+    ))
   }
 
   // SVG 物品渲染
@@ -269,80 +286,91 @@ export default function Monitor() {
             </Link>
           </div>
 
-          {voted ? (
-            <div className="text-center py-4 space-y-2">
-              <div className="font-pixel text-[8px] text-phosphorGreen/60">
-                [ 今日投票已提交 · 等待 00:00 结算 ]
+          {voted && (
+            <div className="text-center pb-2">
+              <div className="inline-flex items-center gap-2 border border-alertRed/30 bg-alertRed/10 px-3 py-1 rounded">
+                <span className="font-pixel text-[7px] text-alertRed/70">◆ 已烙印</span>
+                <span className="font-pixel text-[7px] text-textWhite/40">
+                  {choices.find(c => c.id === votedChoice)?.name || '???'}
+                </span>
               </div>
-              {/* 烙印：显示你选了什么 */}
-              {votedChoice && (
-                <div className="inline-flex items-center gap-2 border border-alertRed/30 bg-alertRed/10 px-3 py-1 rounded">
-                  <span className="font-pixel text-[7px] text-alertRed/70">◆ 已烙印</span>
-                  <span className="font-pixel text-[7px] text-textWhite/40">
-                    {choices.find(c => c.id === votedChoice)?.name || '???'}
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {choices.map((choice, idx) => {
-                const isGazingThis = gazing && gazeTarget === choice.id
-                return (
-                  <div key={choice.id} className="relative">
-                    <button
-                      onClick={() => startGaze(choice.id)}
-                      disabled={gazing && gazeTarget !== choice.id}
-                      className={`w-full text-left border bg-monitorGlass/30 p-3 md:p-4 rounded transition-all duration-300 group
-                        ${isGazingThis 
-                          ? 'border-alertRed/60 bg-alertRed/5' 
-                          : 'border-phosphorGreen/20 hover:border-phosphorGreen/60'}
-                        ${gazing && gazeTarget !== choice.id ? 'opacity-30 cursor-not-allowed' : ''}`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="font-pixel text-[7px] text-phosphorGreen/40 mb-1">物品 {idx + 1}</div>
-                          <div className="text-base text-textWhite group-hover:text-phosphorGreen transition-colors">
-                            {choice.name}
-                          </div>
-                          <div className="font-pixel text-[8px] text-textWhite/50 mt-1">
-                            {choice.action_title}
-                          </div>
-                        </div>
-                        <div className="font-pixel text-[7px] text-phosphorGreen/20 shrink-0">
-                          {choice.votes || 0}票
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* 凝视覆盖层 */}
-                    {isGazingThis && (
-                      <div className="absolute inset-0 bg-monitorBg/90 rounded flex flex-col items-center justify-center gap-3 z-10"
-                           onClick={cancelGaze}>
-                        <div className="font-pixel text-[7px] text-phosphorGreen/40 uppercase tracking-widest">
-                          凝视以确认 · 不可撤回
-                        </div>
-                        <div className="relative w-16 h-16">
-                          <svg className="w-16 h-16 -rotate-90" viewBox="0 0 60 60">
-                            <circle cx="30" cy="30" r="26" fill="none" stroke="#7f1d1d40" strokeWidth="3" />
-                            <circle cx="30" cy="30" r="26" fill="none" stroke="#7f1d1d" strokeWidth="3"
-                              strokeDasharray={`${(gazeTimer / 5) * 163.36} 163.36`}
-                              className="transition-all duration-1000" />
-                          </svg>
-                          <span className="absolute inset-0 flex items-center justify-center font-pixel text-2xl text-alertRed/80">
-                            {gazeTimer}
-                          </span>
-                        </div>
-                        <div className="font-pixel text-[6px] text-phosphorGreen/20">
-                          点击取消
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
             </div>
           )}
+
+          <div className="space-y-3">
+            {choices.map((choice, idx) => {
+              const isGazingThis = gazing && gazeTarget === choice.id
+              const isVotedThis = voted && votedChoice === choice.id
+              return (
+                <div key={choice.id} className="relative">
+                  <button
+                    onClick={() => startGaze(choice.id)}
+                    disabled={voted || (gazing && gazeTarget !== choice.id)}
+                    className={`w-full text-left border bg-monitorGlass/30 p-3 md:p-4 rounded transition-all duration-300 group
+                      ${isGazingThis
+                        ? 'border-alertRed/60 bg-alertRed/5'
+                        : isVotedThis
+                          ? 'border-alertRed/40 bg-alertRed/5'
+                          : 'border-phosphorGreen/20 hover:border-phosphorGreen/60'}
+                      ${(voted || (gazing && gazeTarget !== choice.id)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-pixel text-[7px] text-phosphorGreen/40">物品 {idx + 1}</span>
+                          {isVotedThis && (
+                            <span className="font-pixel text-[6px] text-alertRed/70">● 你的选择</span>
+                          )}
+                        </div>
+                        <div className={`text-base ${voted ? '' : 'group-hover:text-phosphorGreen'} transition-colors`}>
+                          {choice.name}
+                        </div>
+                        <div className="font-pixel text-[8px] text-textWhite/50 mt-1">
+                          {choice.action_title}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <div className={`font-pixel text-[9px] ${isVotedThis ? 'text-alertRed/60' : 'text-phosphorGreen/30'}`}>
+                          {choice.votes || 0} 票
+                        </div>
+                        {/* 票条 */}
+                        <div className="w-16 md:w-20 h-[2px] bg-phosphorGreen/10 rounded overflow-hidden">
+                          <div
+                            className={`h-full rounded ${isVotedThis ? 'bg-alertRed/40' : 'bg-phosphorGreen/20'}`}
+                            style={{ width: `${Math.min(100, ((choice.votes || 0) / Math.max(...choices.map(c => c.votes || 1), 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* 凝视覆盖层 */}
+                  {isGazingThis && (
+                    <div className="absolute inset-0 bg-monitorBg/90 rounded flex flex-col items-center justify-center gap-3 z-10"
+                         onClick={cancelGaze}>
+                      <div className="font-pixel text-[7px] text-phosphorGreen/40 uppercase tracking-widest">
+                        凝视以确认 · 不可撤回
+                      </div>
+                      <div className="relative w-16 h-16">
+                        <svg className="w-16 h-16 -rotate-90" viewBox="0 0 60 60">
+                          <circle cx="30" cy="30" r="26" fill="none" stroke="#7f1d1d40" strokeWidth="3" />
+                          <circle cx="30" cy="30" r="26" fill="none" stroke="#7f1d1d" strokeWidth="3"
+                            strokeDasharray={`${(gazeTimer / 5) * 163.36} 163.36`}
+                            className="transition-all duration-1000" />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center font-pixel text-2xl text-alertRed/80">
+                          {gazeTimer}
+                        </span>
+                      </div>
+                      <div className="font-pixel text-[6px] text-phosphorGreen/20">
+                        点击取消
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </section>
       </main>
     </div>

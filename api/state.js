@@ -72,11 +72,23 @@ export default function handler(req, res) {
   const unlocked = items.slice(0, Math.min(currentDay, items.length))
   const todayAction = items[(currentDay - 1) % items.length]
   const base = ((currentDay - 1) * 3 + 3) % items.length
+  // 确定性伪随机：同一天同一选项票数始终一致，刷新不跳
+  const hash = (seed) => {
+    let h = 2166136261
+    const s = String(seed)
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i)
+      h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)
+    }
+    return Math.abs(h) >>> 0
+  }
+  const getBaseVotes = (day, itemId) => (hash(`${day}-${itemId}`) % 28) + 5
+
   const choices = [base % items.length, (base + 1) % items.length, (base + 2) % items.length].map(idx => ({
     id: items[idx].id,
     name: items[idx].name,
     action_title: items[idx].action_title,
-    votes: Math.floor(Math.random() * 20) + 3
+    votes: getBaseVotes(currentDay, items[idx].id)
   }))
 
   return res.status(200).json({
