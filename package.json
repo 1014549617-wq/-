@@ -2,10 +2,16 @@
   "name": "deprivation",
   "version": "1.0.0",
   "description": "Project Deprivation // 剥夺计划 - 100天现实禁闭仪式",
+  "type": "module",
   "scripts": {
     "build": "cd client && npm install && npm run build",
     "start": "NODE_ENV=production node server/server.js",
     "dev": "cd server && node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.1.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
   },
   "engines": {
     "node": ">=18"
