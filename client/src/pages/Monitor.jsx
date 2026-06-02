@@ -7,7 +7,12 @@ export default function Monitor() {
   const [todayAction, setTodayAction] = useState(null)
   const [choices, setChoices] = useState([])
   const [voted, setVoted] = useState(false)
+  const [votedChoice, setVotedChoice] = useState(null)
+  const [gazing, setGazing] = useState(false)   // 凝视倒计时中
+  const [gazeTarget, setGazeTarget] = useState(null)  // 凝视目标ID
+  const [gazeTimer, setGazeTimer] = useState(5)
   const [clock, setClock] = useState('')
+  const [showGlitch, setShowGlitch] = useState(false)
 
   // 实时时钟
   useEffect(() => {
@@ -34,7 +39,6 @@ export default function Monitor() {
         setChoices(data.today_choices || [])
       })
       .catch(() => {
-        // fallback 本地数据
         setCurrentDay(1)
         setItems([{ id: 1, name: '等身穿衣镜', slug: 'mirror' }])
         setTodayAction({
@@ -48,14 +52,40 @@ export default function Monitor() {
         ])
       })
 
-    // 检查今日是否已投票
     const votedDay = localStorage.getItem('voted_day')
     const today = new Date().toISOString().slice(0, 10)
-    if (votedDay === today) setVoted(true)
+    if (votedDay === today) {
+      setVoted(true)
+      setVotedChoice(parseInt(localStorage.getItem('voted_choice') || '0'))
+    }
   }, [])
 
-  const handleVote = async (choiceId) => {
-    if (voted) return
+  // 凝视倒计时
+  useEffect(() => {
+    if (!gazing) return
+    if (gazeTimer <= 0) {
+      // 凝视完成，执行投票
+      executeVote(gazeTarget)
+      return
+    }
+    const t = setTimeout(() => setGazeTimer(g => g - 1), 1000)
+    return () => clearTimeout(t)
+  }, [gazing, gazeTimer])
+
+  const startGaze = (choiceId) => {
+    if (voted || gazing) return
+    setGazeTarget(choiceId)
+    setGazing(true)
+    setGazeTimer(5)
+  }
+
+  const cancelGaze = () => {
+    setGazing(false)
+    setGazeTarget(null)
+    setGazeTimer(5)
+  }
+
+  const executeVote = async (choiceId) => {
     try {
       await fetch('/api/vote', {
         method: 'POST',
@@ -64,8 +94,11 @@ export default function Monitor() {
       })
     } catch (e) { /* 静默 */ }
     setVoted(true)
+    setVotedChoice(choiceId)
+    setGazing(false)
     const today = new Date().toISOString().slice(0, 10)
     localStorage.setItem('voted_day', today)
+    localStorage.setItem('voted_choice', String(choiceId))
   }
 
   // SVG 物品渲染
@@ -120,19 +153,30 @@ export default function Monitor() {
     )
   }
 
+  // 昨日执行报告（模拟数据）
+  const yesterdayReport = currentDay > 1 ? {
+    total_votes: 127,
+    winning_item: choices.length > 0 ? choices[0].name : '一部已关机的手机',
+    execution_rate: 73,
+    confessions_count: 42
+  } : null
+
   return (
     <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden">
       {/* 噪点 */}
       <div className="monitor-grain" />
 
+      {/* 信号中断转场 */}
+      {showGlitch && <div className="signal-cut"><div className="signal-noise" /></div>}
+
       {/* 顶部状态栏 */}
-      <header className="p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center font-pixel text-[8px] text-phosphorGreen gap-2">
-        <div className="truncate">SYS_STATUS: ACTIVE // CAM-01</div>
+      <header className="p-3 md:p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center font-pixel text-[7px] md:text-[8px] text-phosphorGreen gap-2">
+        <div className="truncate">SYS: ACTIVE // CAM-01</div>
         <div className="flex items-center gap-2">
           <span className="text-alertRed rec-pulse">●</span>
           <span className="text-alertRed">REC</span>
         </div>
-        <div id="live-clock" className="tabular-nums">{clock}</div>
+        <div className="tabular-nums">{clock}</div>
       </header>
 
       {/* 100天进度红线 */}
@@ -144,46 +188,70 @@ export default function Monitor() {
       </div>
 
       {/* 主内容 */}
-      <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+      <main className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
         {/* 核心监控视窗 */}
-        <div id="monitor-view" className="scanlines w-full h-72 md:h-80 bg-monitorGlass border border-phosphorGreen/50 rounded relative flex items-center justify-center">
+        <div id="monitor-view" className="scanlines w-full h-56 md:h-80 bg-monitorGlass border border-phosphorGreen/50 rounded relative flex items-center justify-center overflow-hidden">
           {/* 物品图层 */}
-          <div id="items-layer" className="absolute inset-0 opacity-60 flex items-end justify-center gap-8 pb-8 flex-wrap">
+          <div id="items-layer" className="absolute inset-0 opacity-60 flex items-end justify-center gap-4 md:gap-8 pb-6 md:pb-8 flex-wrap px-2">
             {items.map((item, idx) => (
               <div key={item.id} className="flex flex-col items-center gap-1 fade-in-up" style={{ animationDelay: `${idx * 0.3}s` }}>
                 {itemSVGs[item.slug] || (
-                  <div className="w-12 h-12 border border-phosphorGreen/30 rounded flex items-center justify-center font-pixel text-[7px] text-phosphorGreen/40">
+                  <div className="w-10 h-10 md:w-12 md:h-12 border border-phosphorGreen/30 rounded flex items-center justify-center font-pixel text-[6px] md:text-[7px] text-phosphorGreen/40">
                     {item.slug?.slice(0, 3).toUpperCase()}
                   </div>
                 )}
-                <span className="font-pixel text-[7px] text-phosphorGreen/30">{item.name}</span>
+                <span className="font-pixel text-[6px] md:text-[7px] text-phosphorGreen/30">{item.name}</span>
               </div>
             ))}
             {items.length === 0 && (
-              <div className="font-pixel text-[8px] text-phosphorGreen/20">[ 房间为空 ]</div>
+              <div className="font-pixel text-[8px] text-phosphorGreen/20">[ 房间为空 · 等待第一件物品坠入 ]</div>
             )}
           </div>
 
           {/* 悬浮指示 */}
-          <div className="absolute top-3 right-4 font-pixel text-[7px] text-phosphorGreen/40">
+          <div className="absolute top-2 md:top-3 right-3 md:right-4 font-pixel text-[6px] md:text-[7px] text-phosphorGreen/40">
             DAY_{String(currentDay).padStart(3, '0')}
           </div>
-          <div className="absolute bottom-3 left-4 font-pixel text-[7px] text-phosphorGreen/20">
+          <div className="absolute bottom-2 md:bottom-3 left-3 md:left-4 font-pixel text-[6px] md:text-[7px] text-phosphorGreen/20">
             ITEMS: {items.length}
           </div>
-          {/* REC 时间戳水印 */}
-          <div className="absolute bottom-3 right-4 font-pixel text-[7px] text-phosphorGreen/15">
+          <div className="absolute bottom-2 md:bottom-3 right-3 md:right-4 font-pixel text-[6px] md:text-[7px] text-phosphorGreen/15">
             REC {clock}
           </div>
         </div>
 
+        {/* 昨日执行报告 */}
+        {yesterdayReport && (
+          <section className="border border-alertRed/20 bg-monitorGlass/30 p-3 md:p-4 rounded">
+            <div className="font-pixel text-[7px] text-alertRed/50 uppercase tracking-[0.2em] mb-3">// 昨日执行报告 //</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <div className="font-pixel text-[6px] text-phosphorGreen/30 mb-1">总投票数</div>
+                <div className="font-pixel text-sm md:text-base text-textWhite/70">{yesterdayReport.total_votes}</div>
+              </div>
+              <div>
+                <div className="font-pixel text-[6px] text-phosphorGreen/30 mb-1">坠入物品</div>
+                <div className="font-pixel text-[8px] md:text-[10px] text-textWhite/70 leading-relaxed">{yesterdayReport.winning_item}</div>
+              </div>
+              <div>
+                <div className="font-pixel text-[6px] text-phosphorGreen/30 mb-1">执行率</div>
+                <div className="font-pixel text-sm md:text-base text-alertRed/70">{yesterdayReport.execution_rate}%</div>
+              </div>
+              <div>
+                <div className="font-pixel text-[6px] text-phosphorGreen/30 mb-1">告解数</div>
+                <div className="font-pixel text-sm md:text-base text-textWhite/70">{yesterdayReport.confessions_count}</div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* 今日现实行动契约面板 */}
-        <section className="border border-phosphorGreen/30 bg-monitorGlass/50 p-5 md:p-6 space-y-4 rounded">
+        <section className="border border-phosphorGreen/30 bg-monitorGlass/50 p-4 md:p-6 space-y-3 md:space-y-4 rounded">
           <div className="font-pixel text-[8px] text-phosphorGreen uppercase tracking-[0.2em]">// 今日现实指令 //</div>
           {todayAction ? (
             <>
-              <h2 className="font-pixel text-sm md:text-base text-textWhite leading-relaxed">{todayAction.action_title}</h2>
-              <p className="text-lg text-textWhite/80 leading-relaxed indent-8">
+              <h2 className="font-pixel text-xs md:text-sm text-textWhite leading-relaxed">{todayAction.action_title}</h2>
+              <p className="text-base md:text-lg text-textWhite/80 leading-relaxed indent-8">
                 {todayAction.action_command}
               </p>
             </>
@@ -193,7 +261,7 @@ export default function Monitor() {
         </section>
 
         {/* 明日投票区 */}
-        <section className="border border-phosphorGreen/30 bg-monitorGlass/50 p-5 md:p-6 space-y-4 rounded">
+        <section className="border border-phosphorGreen/30 bg-monitorGlass/50 p-4 md:p-6 space-y-3 md:space-y-4 rounded">
           <div className="flex items-center justify-between">
             <div className="font-pixel text-[8px] text-phosphorGreen uppercase tracking-[0.2em]">// 明日博弈 · 三选一 //</div>
             <Link to="/confessional" className="font-pixel text-[7px] text-phosphorGreen/50 hover:text-phosphorGreen transition-colors">
@@ -202,34 +270,77 @@ export default function Monitor() {
           </div>
 
           {voted ? (
-            <div className="font-pixel text-[8px] text-phosphorGreen/60 py-4 text-center">
-              [ 今日投票已提交 · 等待 00:00 结算 ]
+            <div className="text-center py-4 space-y-2">
+              <div className="font-pixel text-[8px] text-phosphorGreen/60">
+                [ 今日投票已提交 · 等待 00:00 结算 ]
+              </div>
+              {/* 烙印：显示你选了什么 */}
+              {votedChoice && (
+                <div className="inline-flex items-center gap-2 border border-alertRed/30 bg-alertRed/10 px-3 py-1 rounded">
+                  <span className="font-pixel text-[7px] text-alertRed/70">◆ 已烙印</span>
+                  <span className="font-pixel text-[7px] text-textWhite/40">
+                    {choices.find(c => c.id === votedChoice)?.name || '???'}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
-              {choices.map((choice, idx) => (
-                <button
-                  key={choice.id}
-                  onClick={() => handleVote(choice.id)}
-                  className="w-full text-left border border-phosphorGreen/20 hover:border-phosphorGreen/60 bg-monitorGlass/30
-                             p-4 rounded transition-all duration-300 group"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="font-pixel text-[7px] text-phosphorGreen/40 mb-1">物品 {idx + 1}</div>
-                      <div className="text-base text-textWhite group-hover:text-phosphorGreen transition-colors">
-                        {choice.name}
+              {choices.map((choice, idx) => {
+                const isGazingThis = gazing && gazeTarget === choice.id
+                return (
+                  <div key={choice.id} className="relative">
+                    <button
+                      onClick={() => startGaze(choice.id)}
+                      disabled={gazing && gazeTarget !== choice.id}
+                      className={`w-full text-left border bg-monitorGlass/30 p-3 md:p-4 rounded transition-all duration-300 group
+                        ${isGazingThis 
+                          ? 'border-alertRed/60 bg-alertRed/5' 
+                          : 'border-phosphorGreen/20 hover:border-phosphorGreen/60'}
+                        ${gazing && gazeTarget !== choice.id ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="font-pixel text-[7px] text-phosphorGreen/40 mb-1">物品 {idx + 1}</div>
+                          <div className="text-base text-textWhite group-hover:text-phosphorGreen transition-colors">
+                            {choice.name}
+                          </div>
+                          <div className="font-pixel text-[8px] text-textWhite/50 mt-1">
+                            {choice.action_title}
+                          </div>
+                        </div>
+                        <div className="font-pixel text-[7px] text-phosphorGreen/20 shrink-0">
+                          {choice.votes || 0}票
+                        </div>
                       </div>
-                      <div className="font-pixel text-[8px] text-textWhite/50 mt-1">
-                        {choice.action_title}
+                    </button>
+
+                    {/* 凝视覆盖层 */}
+                    {isGazingThis && (
+                      <div className="absolute inset-0 bg-monitorBg/90 rounded flex flex-col items-center justify-center gap-3 z-10"
+                           onClick={cancelGaze}>
+                        <div className="font-pixel text-[7px] text-phosphorGreen/40 uppercase tracking-widest">
+                          凝视以确认 · 不可撤回
+                        </div>
+                        <div className="relative w-16 h-16">
+                          <svg className="w-16 h-16 -rotate-90" viewBox="0 0 60 60">
+                            <circle cx="30" cy="30" r="26" fill="none" stroke="#7f1d1d40" strokeWidth="3" />
+                            <circle cx="30" cy="30" r="26" fill="none" stroke="#7f1d1d" strokeWidth="3"
+                              strokeDasharray={`${(gazeTimer / 5) * 163.36} 163.36`}
+                              className="transition-all duration-1000" />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center font-pixel text-2xl text-alertRed/80">
+                            {gazeTimer}
+                          </span>
+                        </div>
+                        <div className="font-pixel text-[6px] text-phosphorGreen/20">
+                          点击取消
+                        </div>
                       </div>
-                    </div>
-                    <div className="font-pixel text-[7px] text-phosphorGreen/20 shrink-0">
-                      {choice.votes || 0}票
-                    </div>
+                    )}
                   </div>
-                </button>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>
