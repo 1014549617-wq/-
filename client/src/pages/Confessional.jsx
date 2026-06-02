@@ -5,6 +5,7 @@ export default function Confessional() {
   const [confession, setConfession] = useState('')
   const [hasAuthority, setHasAuthority] = useState(false)
   const [wallItems, setWallItems] = useState([])
+  const [previewItems, setPreviewItems] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [clock, setClock] = useState('')
@@ -29,36 +30,60 @@ export default function Confessional() {
     return () => clearInterval(t)
   }, [])
 
-  // 检查今日权限
+  // 生成模糊预览文字（给未提交者看的磨砂玻璃效果）
+  const generatePreview = (text) => {
+    const chars = text.split('')
+    const revealed = new Set()
+    // 只露 20% 的字
+    const count = Math.max(3, Math.floor(chars.length * 0.2))
+    while (revealed.size < count) {
+      revealed.add(Math.floor(Math.random() * chars.length))
+    }
+    return chars.map((c, i) => revealed.has(i) ? c : '█').join('')
+  }
+
+  // 检查今日权限 + 加载预览
   useEffect(() => {
     const today = getLocalDate()
     const authorityDate = localStorage.getItem('has_authority_date')
     if (authorityDate === today) {
       setHasAuthority(true)
       loadWall()
+    } else {
+      loadPreview()
     }
   }, [])
 
+  // 加载模糊预览（未交出秘密前）
+  const loadPreview = async () => {
+    try {
+      const res = await fetch('/api/confessions?random=8')
+      const data = await res.json()
+      setPreviewItems((data.confessions || []).map(item => ({
+        ...item,
+        preview: generatePreview(item.content)
+      })))
+    } catch {
+      const seeds = getSeedConfessions()
+      const shuffled = seeds.sort(() => Math.random() - 0.5).slice(0, 6)
+      setPreviewItems(shuffled.map((content, i) => ({
+        id: Date.now() + i,
+        content,
+        preview: generatePreview(content),
+        time: `${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`
+      })))
+    }
+  }
+
+  // 加载完整告解墙
   const loadWall = async () => {
     try {
-      const res = await fetch('/api/confessions?random=5')
+      const res = await fetch('/api/confessions?random=8')
       const data = await res.json()
       setWallItems(data.confessions || [])
     } catch {
-      // 种子告解数据
-      const seeds = [
-        '我花了三小时盯着墙壁上的裂缝，想象那是一扇门。没有人会打开它，但光是想象那个可能性，就够我撑过今晚。',
-        '今天第一次没有化妆出门。地铁上没有人看我。我突然意识到，我以前害怕的不是"被看"，而是"不被看见"。',
-        '我对着冰箱里的过期牛奶说了声对不起，然后把它扔了。我不知道我在道歉什么。',
-        '删掉了所有社交软件。三小时后重新下载。这种反复让我觉得自己像一个坏掉的开关。',
-        '在超市里突然忘记了自己要买什么，然后什么也没买就走了。收银员看我的眼神好像在说：你确定你没事吗？',
-        '凌晨三点对着空荡荡的房间说了声"你好"。没有人回应。但我突然觉得，沉默也是一种回答。',
-        '今天没有看手机地坐了一整趟地铁。发现窗外的广告牌换了好几轮了，我之前从来没注意过。',
-        '拒绝了三次聚会邀请，不是因为不想去，而是因为我已经忘了怎么在人群里假装开心。',
-        '把手机调成灰度模式后，世界突然变得无聊了很多。然后我意识到，我可能也对色彩上瘾了。',
-        '在深夜给一个再也不会回复的人发了消息。不是因为期待回应，只是想让对话框里多一条我发的内容。',
-      ]
-      const shuffled = seeds.sort(() => Math.random() - 0.5).slice(0, 5)
+      const seeds = getSeedConfessions()
+      const shuffled = seeds.sort(() => Math.random() - 0.5).slice(0, 8)
       setWallItems(shuffled.map((content, i) => ({
         id: Date.now() + i,
         content,
@@ -66,6 +91,19 @@ export default function Confessional() {
       })))
     }
   }
+
+  const getSeedConfessions = () => [
+    '我花了三小时盯着墙壁上的裂缝，想象那是一扇门。没有人会打开它，但光是想象那个可能性，就够我撑过今晚。',
+    '今天第一次没有化妆出门。地铁上没有人看我。我突然意识到，我以前害怕的不是"被看"，而是"不被看见"。',
+    '凌晨三点对着空荡荡的房间说了声"你好"。没有人回应。但我突然觉得，沉默也是一种回答。',
+    '我在公司的洗手间里哭过。不止一次。每次都是打开水龙头，让水流声盖住所有动静。然后补妆，回工位，像什么都没发生。',
+    '分手三年了，我每个月还是会翻一次她的朋友圈。不是为了怀念，是为了确认她过得比我好。',
+    '我把所有聊天记录都备份了。深夜会搜索"对不起"和"我错了"，看看这些年我对谁说过最多。结果发现，对自己说得最多。',
+    '有人问我还好吗，我说还好。有人说想我了，我说我也是。全是假的。但假久了以后我分不清哪次是真的了，连对自己我都开始说谎。',
+    '做梦的时候我总是在跑。不是被追，是朝着某个看不见的东西跑。我怀疑我在梦里比在现实里更诚实——至少在梦里我知道自己在逃。',
+    '洗澡的时候故意用很烫的水。不是因为舒服，是因为只有痛觉能让我确认自己还在这个身体里。',
+    '我从来不让别人来我家。不是因为乱，是因为这里是我唯一能卸下一切的地方。如果有人看到了我独处时的样子，那我就真的无处可藏了。',
+  ]
 
   const handleSubmit = async () => {
     if (confession.trim().length < 30) return
@@ -86,6 +124,9 @@ export default function Confessional() {
     setSubmitting(false)
     loadWall()
   }
+
+  const charCount = confession.trim().length
+  const progress = Math.min((charCount / 30) * 100, 100)
 
   return (
     <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden">
@@ -132,16 +173,16 @@ export default function Confessional() {
             />
             <div className="flex items-center justify-between">
               <div className="font-pixel text-[7px] text-phosphorGreen/30">
-                {confession.trim().length < 30
-                  ? `筹码不足 · 还需 ${30 - confession.trim().length} 字`
+                {charCount < 30
+                  ? `筹码不足 · 还需 ${30 - charCount} 字`
                   : '筹码充足 · 可以提交'}
               </div>
               <button
                 onClick={handleSubmit}
-                disabled={confession.trim().length < 30 || submitting}
+                disabled={charCount < 30 || submitting}
                 className={`font-pixel text-[8px] px-5 py-2 tracking-[0.2em] uppercase border rounded transition-all duration-300
-                  ${confession.trim().length >= 30
-                    ? 'border-phosphorGreen/50 text-phosphorGreen hover:bg-phosphorGreen/10'
+                  ${charCount >= 30
+                    ? 'border-phosphorGreen/50 text-phosphorGreen hover:bg-phosphorGreen/10 hover:shadow-[0_0_20px_rgba(74,107,82,0.2)]'
                     : 'border-phosphorGreen/10 text-phosphorGreen/20 cursor-not-allowed'}`}
               >
                 {submitting ? '提交中...' : '等价交换'}
@@ -149,9 +190,9 @@ export default function Confessional() {
             </div>
             {/* 字数进度条 */}
             <div className="w-full h-[2px] bg-phosphorGreen/10 rounded">
-              <div 
-                className={`h-full rounded transition-all duration-300 ${confession.trim().length >= 30 ? 'bg-phosphorGreen/50' : 'bg-phosphorGreen/20'}`}
-                style={{ width: `${Math.min((confession.trim().length / 30) * 100, 100)}%` }}
+              <div
+                className={`h-full rounded transition-all duration-300 ${charCount >= 30 ? 'bg-phosphorGreen/50' : 'bg-phosphorGreen/20'}`}
+                style={{ width: `${progress}%` }}
               />
             </div>
           </div>
@@ -169,7 +210,7 @@ export default function Confessional() {
           </div>
         )}
 
-        {/* 告解墙 - 暗房显影效果 */}
+        {/* ========== 告解墙：完整版（已交出秘密） ========== */}
         {hasAuthority && (
           <div className="space-y-3">
             <div className="font-pixel text-[7px] text-phosphorGreen/40 tracking-widest uppercase">// 他人告解 · 随机抽样 //</div>
@@ -178,7 +219,7 @@ export default function Confessional() {
               <div
                 key={item.id}
                 className="border border-phosphorGreen/15 bg-monitorGlass/30 p-3 md:p-4 rounded darkroom-reveal"
-                style={{ animationDelay: `${idx * 0.8}s` }}
+                style={{ animationDelay: `${idx * 0.6}s` }}
               >
                 <p className="text-sm md:text-base text-textWhite/70 leading-relaxed indent-6">
                   {item.content}
@@ -195,6 +236,38 @@ export default function Confessional() {
                 [ 暂无告解记录 ]
               </div>
             )}
+          </div>
+        )}
+
+        {/* ========== 窥视预览：磨砂玻璃（未交出秘密） ========== */}
+        {!hasAuthority && previewItems.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="font-pixel text-[7px] text-phosphorGreen/30 tracking-widest uppercase">// 窥视预览 · 磨砂玻璃 //</div>
+              <div className="font-pixel text-[6px] text-alertRed/40">🔒 交出秘密以解锁</div>
+            </div>
+
+            {previewItems.map((item, idx) => (
+              <div
+                key={item.id}
+                className="border border-phosphorGreen/10 bg-monitorGlass/20 p-3 md:p-4 rounded relative overflow-hidden"
+                style={{ animationDelay: `${idx * 0.4}s` }}
+              >
+                {/* 磨砂模糊覆盖 */}
+                <div className="absolute inset-0 bg-monitorBg/60 backdrop-blur-[3px] z-10 flex items-center justify-center">
+                  <div className="font-pixel text-[7px] text-phosphorGreen/20 tracking-widest text-center px-4">
+                    ██████ 交出你的秘密 ██████
+                  </div>
+                </div>
+                <p className="text-sm md:text-base text-textWhite/25 leading-relaxed indent-6 blur-[2px] select-none">
+                  {item.preview}
+                </p>
+                <div className="mt-3 flex justify-between font-pixel text-[7px] text-phosphorGreen/10">
+                  <span>ANON_████</span>
+                  <span>██:██</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
