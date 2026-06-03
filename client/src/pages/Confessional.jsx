@@ -109,11 +109,16 @@ export default function Confessional() {
     if (confession.trim().length < 30) return
     setSubmitting(true)
     try {
-      await fetch('/api/confessions', {
+      const res = await fetch('/api/confessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: confession.trim() })
       })
+      const data = await res.json()
+      // 如果后端返回了更新后的告解列表，直接用
+      if (data.confessions) {
+        setWallItems(data.confessions)
+      }
     } catch { /* 静默 */ }
 
     const today = getLocalDate()
@@ -122,7 +127,8 @@ export default function Confessional() {
     setHasAuthority(true)
     setSubmitted(true)
     setSubmitting(false)
-    loadWall()
+    // 延迟刷新确保 Blobs 一致性
+    setTimeout(() => loadWall(), 1500)
   }
 
   const charCount = confession.trim().length

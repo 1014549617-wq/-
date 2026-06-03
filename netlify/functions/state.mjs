@@ -1,8 +1,10 @@
 // ============================================
 //  DEPRIVATION PROJECT · STATE API
 //  Netlify Function: /api/state
-//  Deterministic hash for base votes (Blobs unavailable on free tier)
+//  Uses Netlify Blobs for shared persistent storage
 // ============================================
+
+import { getStore } from "@netlify/blobs"
 
 const items = [
   { id: 1, name: "等身穿衣镜", slug: "mirror", action_title: "剥夺粉饰（Denial of Mask）", action_command: "今天，当你面对现实中的镜子时，必须强迫自己停下，无表情凝视自己的眼睛 3 分钟。今日现实禁令：禁止使用任何相机滤镜、彩妆或遮瑕产品。带着你最赤裸、最疲惫的真实面孔走出家门。体会失去面具庇护时的局促，以及午后突然降临的放弃挣扎的解脱。", category: "Psychological" },
@@ -40,22 +42,20 @@ const items = [
   { id: 33, name: "一只空水杯", slug: "emptycup", action_title: "丰裕剥夺（Abundance Denial）", action_command: "今天只允许喝水和吃白米饭/面包。没有零食、没有饮料、没有加餐。当你被剥夺了食物的丰裕选择，'饥饿'这个词会从抽象变成具体。你日常吃下的东西里，有多少不是因为饿。", category: "Physiological" }
 ]
 
-// 简单的确定性哈希：给每个物品每天一个自然的基础票数
-function hashVotes(day, itemId) {
-  let hash = 0
-  const str = `${day}-${itemId}-deprivation`
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i)
-    hash = hash & hash
-  }
-  // 生成 2-12 之间的票数，看起来自然
-  return 2 + (Math.abs(hash) % 11)
-}
-
 function getCurrentDay() {
   const start = new Date('2026-06-02T00:00:00+08:00')
   const now = new Date()
   return Math.min(Math.max(1, Math.floor((now - start) / 86400000) + 1), 100)
+}
+
+// 安全地从 Blobs 读取 JSON 数据，失败则回退
+async function safeGetJSON(store, key, fallback) {
+  try {
+    const data = await store.get(key, { type: "json", consistency: "strong" })
+    return data !== null ? data : fallback
+  } catch {
+    return fallback
+  }
 }
 
 export default async (req) => {
@@ -70,24 +70,62 @@ export default async (req) => {
   const unlocked = items.slice(0, Math.min(currentDay, items.length))
   const todayAction = items[(currentDay - 1) % items.length]
   const base = ((currentDay - 1) * 3 + 3) % items.length
+  const choiceIds = [base % items.length, (base + 1) % items.length, (base + 2) % items.length]
 
-  // 基于日期+物品ID生成基础票数（每天不同，看起来自然）
-  const choices = [base % items.length, (base + 1) % items.length, (base + 2) % items.length].map(idx => ({
-    id: items[idx].id,
-    name: items[idx].name,
-    action_title: items[idx].action_title,
-    votes: hashVotes(currentDay, items[idx].id)
-  }))
+  // 尝试从 Blobs 读取真实票数
+  let votesData = {}
+  let viewCount = 0
+  let blobsAvailable = false
 
-  // 浏览量 = 天数 * 一个因子 + 随机偏移
-  const viewCount = currentDay * 47 + 183 + (currentDay * 3)
+  try {
+    const store = getStore("deprivation", { consistency: "strong" })
+    votesData = await safeGetJSON(store, `votes_day_${currentDay}`, {})
+    viewCount = await safeGetJSON(store, "view_count", 0)
+    // 每次访问 +1
+    viewCount += 1
+    await store.setJSON("view_count", viewCount)
+    blobsAvailable = true
+  } catch (e) {
+    // Blobs 不可用，使用确定性哈希回退
+  }
+
+  // 构建 choices
+  const choices = choiceIds.map(idx => {
+    const item = items[idx]
+    const realVotes = votesData[item.id] || 0
+    // 如果 Blobs 可用且有真实票数就用真实的，否则给 0（不造假）
+    return {
+      id: item.id,
+      name: item.name,
+      action_title: item.action_title,
+      votes: realVotes
+    }
+  })
+
+  // 如果 Blobs 不可用，用哈希生成基础票数（回退方案）
+  if (!blobsAvailable) {
+    function hashVotes(day, itemId) {
+      let hash = 0
+      const str = `${day}-${itemId}-deprivation`
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i)
+        hash = hash & hash
+      }
+      return 2 + (Math.abs(hash) % 11)
+    }
+    choices.forEach((c, i) => {
+      c.votes = hashVotes(currentDay, c.id)
+    })
+    viewCount = currentDay * 47 + 183 + (currentDay * 3)
+  }
 
   return new Response(JSON.stringify({
     current_day: currentDay,
     unlocked_items: unlocked,
     today_action: todayAction,
     today_choices: choices,
-    view_count: viewCount
+    view_count: viewCount,
+    blobs_available: blobsAvailable
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }

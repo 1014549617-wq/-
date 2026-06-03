@@ -35,22 +35,15 @@ export default function Monitor() {
     return () => clearInterval(t)
   }, [])
 
-  // 加载全局状态 + 合并本地投票增量
-  useEffect(() => {
+  // 加载全局状态
+  const loadState = () => {
     fetch('/api/state')
       .then(r => r.json())
       .then(data => {
         setCurrentDay(data.current_day)
         setItems(data.unlocked_items || [])
         setTodayAction(data.today_action)
-        // 合并后端基础票数 + 本地持久化增量
-        const today = getLocalDate()
-        const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
-        const mergedChoices = (data.today_choices || []).map(c => ({
-          ...c,
-          votes: (c.votes || 0) + (localVotes[c.id] || 0)
-        }))
-        setChoices(mergedChoices)
+        setChoices(data.today_choices || [])
         setViewCount(data.view_count || 0)
       })
       .catch(() => {
@@ -66,6 +59,10 @@ export default function Monitor() {
           { id: 6, name: '一截燃烧过半的蜡烛', action_title: '时间剥夺（Temporal Diminishment）', votes: 15 }
         ])
       })
+  }
+
+  useEffect(() => {
+    loadState()
 
     const votedDay = localStorage.getItem('voted_day')
     const today = getLocalDate()
@@ -101,28 +98,44 @@ export default function Monitor() {
 
   const executeVote = async (choiceId) => {
     try {
-      await fetch('/api/vote', {
+      const res = await fetch('/api/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ choice_id: choiceId })
       })
-    } catch (e) { /* 静默 */ }
+      const data = await res.json()
 
-    // 本地持久化：记录投票 + 票数增量
+      // 如果后端返回了更新后的票数，直接用
+      if (data.updated_votes) {
+        setChoices(prev => prev.map(c => ({
+          ...c,
+          votes: data.updated_votes[c.id] || c.votes
+        })))
+      } else {
+        // Blobs 不可用，本地 +1
+        setChoices(prev => prev.map(c =>
+          c.id === choiceId ? { ...c, votes: (c.votes || 0) + 1 } : c
+        ))
+      }
+    } catch {
+      // 网络失败，本地 +1
+      setChoices(prev => prev.map(c =>
+        c.id === choiceId ? { ...c, votes: (c.votes || 0) + 1 } : c
+      ))
+    }
+
+    // 本地记录投票状态
     const today = getLocalDate()
     localStorage.setItem('voted_day', today)
     localStorage.setItem('voted_choice', String(choiceId))
-    const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
-    localVotes[choiceId] = (localVotes[choiceId] || 0) + 1
-    localStorage.setItem(`votes_${today}`, JSON.stringify(localVotes))
 
     // 更新本地状态
     setVoted(true)
     setVotedChoice(choiceId)
     setGazing(false)
-    setChoices(prev => prev.map(c =>
-      c.id === choiceId ? { ...c, votes: (c.votes || 0) + 1 } : c
-    ))
+
+    // 延迟刷新一下完整状态（确保 Blobs 数据一致）
+    setTimeout(() => loadState(), 1500)
   }
 
   // SVG 物品渲染
