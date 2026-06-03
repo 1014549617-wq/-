@@ -43,14 +43,8 @@ export default function Monitor() {
         setCurrentDay(data.current_day)
         setItems(data.unlocked_items || [])
         setTodayAction(data.today_action)
-        // 合并后端基础票数 + 本地持久化增量
-        const today = getLocalDate()
-        const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
-        const mergedChoices = (data.today_choices || []).map(c => ({
-          ...c,
-          votes: (c.votes || 0) + (localVotes[c.id] || 0)
-        }))
-        setChoices(mergedChoices)
+        // 票数直接从后端读取（Netlify Blobs 持久化）
+        setChoices(data.today_choices || [])
         setViewCount(data.view_count || 0)
       })
       .catch(() => {
@@ -108,22 +102,23 @@ export default function Monitor() {
       })
     } catch (e) { /* 静默 */ }
 
-    // 本地持久化：记录投票 + 票数增量
+    // 本地记录投票状态
     const today = getLocalDate()
     localStorage.setItem('voted_day', today)
     localStorage.setItem('voted_choice', String(choiceId))
-    const localVotes = JSON.parse(localStorage.getItem(`votes_${today}`) || '{}')
-    localVotes[choiceId] = (localVotes[choiceId] || 0) + 1
-    localStorage.setItem(`votes_${today}`, JSON.stringify(localVotes))
 
     // 更新本地状态
     setVoted(true)
     setVotedChoice(choiceId)
     setGazing(false)
-    setGazing(false)
-    setChoices(prev => prev.map(c =>
-      c.id === choiceId ? { ...c, votes: (c.votes || 0) + 1 } : c
-    ))
+
+    // 从后端重新获取最新票数（Blobs 已持久化）
+    try {
+      const res = await fetch('/api/state')
+      const data = await res.json()
+      setChoices(data.today_choices || [])
+      setViewCount(data.view_count || 0)
+    } catch (e) { /* 静默 */ }
   }
 
   // SVG 物品渲染
