@@ -113,10 +113,78 @@ export default async (req) => {
       }
       return 2 + (Math.abs(hash) % 11)
     }
-    choices.forEach((c, i) => {
+    choices.forEach((c) => {
       c.votes = hashVotes(currentDay, c.id)
     })
     viewCount = currentDay * 47 + 183 + (currentDay * 3)
+  }
+
+  // ========== 昨日执行报告 ==========
+  let yesterdayReport = null
+  if (currentDay > 1) {
+    const prevDay = currentDay - 1
+    const prevBase = ((prevDay - 1) * 3 + 3) % items.length
+    const prevChoiceIds = [prevBase % items.length, (prevBase + 1) % items.length, (prevBase + 2) % items.length]
+    const prevChoices = prevChoiceIds.map(idx => items[idx])
+
+    let prevVotes = {}
+    let prevConfs = []
+
+    if (blobsAvailable) {
+      try {
+        const store = getStore("deprivation", { consistency: "strong" })
+        prevVotes = await safeGetJSON(store, `votes_day_${prevDay}`, {})
+        prevConfs = await safeGetJSON(store, "user_confessions", [])
+      } catch { /* 静默回退 */ }
+    }
+
+    // 计算昨日总票数和获胜物品
+    let totalVotes = 0
+    let maxVotes = -1
+    let winner = prevChoices[0]
+
+    for (const item of prevChoices) {
+      const v = prevVotes[item.id] || 0
+      totalVotes += v
+      if (v > maxVotes) {
+        maxVotes = v
+        winner = item
+      }
+    }
+
+    // 如果 Blobs 没有数据（第一天），回退到哈希
+    if (totalVotes === 0 && !blobsAvailable) {
+      function hashYesterday(day, itemId) {
+        let hash = 0
+        const str = `${day}-${itemId}-deprivation`
+        for (let i = 0; i < str.length; i++) {
+          hash = ((hash << 5) - hash) + str.charCodeAt(i)
+          hash = hash & hash
+        }
+        return 2 + (Math.abs(hash) % 11)
+      }
+      totalVotes = 0
+      maxVotes = -1
+      for (const item of prevChoices) {
+        const v = hashYesterday(prevDay, item.id)
+        totalVotes += v
+        if (v > maxVotes) {
+          maxVotes = v
+          winner = item
+        }
+      }
+    }
+
+    const execRate = totalVotes > 0
+      ? Math.round((maxVotes / totalVotes) * 100)
+      : 0
+
+    yesterdayReport = {
+      total_votes: totalVotes,
+      winning_item: winner.name,
+      execution_rate: execRate,
+      confessions_count: prevConfs.length
+    }
   }
 
   return new Response(JSON.stringify({
@@ -125,7 +193,8 @@ export default async (req) => {
     today_action: todayAction,
     today_choices: choices,
     view_count: viewCount,
-    blobs_available: blobsAvailable
+    blobs_available: blobsAvailable,
+    yesterday_report: yesterdayReport
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }

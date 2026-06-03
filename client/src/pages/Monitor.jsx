@@ -45,6 +45,9 @@ export default function Monitor() {
         setTodayAction(data.today_action)
         setChoices(data.today_choices || [])
         setViewCount(data.view_count || 0)
+        if (data.yesterday_report) {
+          setYesterdayReport(data.yesterday_report)
+        }
       })
       .catch(() => {
         setCurrentDay(1)
@@ -190,13 +193,8 @@ export default function Monitor() {
     )
   }
 
-  // 昨日执行报告（模拟数据）
-  const yesterdayReport = currentDay > 1 ? {
-    total_votes: 127,
-    winning_item: choices.length > 0 ? choices[0].name : '一部已关机的手机',
-    execution_rate: 73,
-    confessions_count: 42
-  } : null
+  // 昨日执行报告
+  const [yesterdayReport, setYesterdayReport] = useState(null)
 
   return (
     <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden">
