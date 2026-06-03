@@ -9,7 +9,6 @@
     "dev": "cd server && node server.js"
   },
   "dependencies": {
-    "@netlify/blobs": "^8.0.1",
     "better-sqlite3": "^11.1.2",
     "cors": "^2.8.5",
     "express": "^4.19.2"

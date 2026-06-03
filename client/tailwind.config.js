@@ -7,11 +7,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        monitorBg: '#080c0a',
-        monitorGlass: '#0e1310',
-        phosphorGreen: '#4a6b52',
-        alertRed: '#7f1d1d',
-        textWhite: '#e5e7eb',
+        monitorBg: '#0a110d',
+        monitorGlass: '#121a15',
+        phosphorGreen: '#5a8f6a',
+        alertRed: '#a83232',
+        textWhite: '#f0f0f0',
       },
       fontFamily: {
         pixel: ['"Press Start 2P"', 'monospace'],

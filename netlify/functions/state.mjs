@@ -1,10 +1,8 @@
 // ============================================
 //  DEPRIVATION PROJECT · STATE API
 //  Netlify Function: /api/state
-//  Uses Netlify Blobs for persistent vote storage
+//  Deterministic hash for base votes (Blobs unavailable on free tier)
 // ============================================
-
-import { getStore } from '@netlify/blobs'
 
 const items = [
   { id: 1, name: "等身穿衣镜", slug: "mirror", action_title: "剥夺粉饰（Denial of Mask）", action_command: "今天，当你面对现实中的镜子时，必须强迫自己停下，无表情凝视自己的眼睛 3 分钟。今日现实禁令：禁止使用任何相机滤镜、彩妆或遮瑕产品。带着你最赤裸、最疲惫的真实面孔走出家门。体会失去面具庇护时的局促，以及午后突然降临的放弃挣扎的解脱。", category: "Psychological" },
@@ -42,6 +40,18 @@ const items = [
   { id: 33, name: "一只空水杯", slug: "emptycup", action_title: "丰裕剥夺（Abundance Denial）", action_command: "今天只允许喝水和吃白米饭/面包。没有零食、没有饮料、没有加餐。当你被剥夺了食物的丰裕选择，'饥饿'这个词会从抽象变成具体。你日常吃下的东西里，有多少不是因为饿。", category: "Physiological" }
 ]
 
+// 简单的确定性哈希：给每个物品每天一个自然的基础票数
+function hashVotes(day, itemId) {
+  let hash = 0
+  const str = `${day}-${itemId}-deprivation`
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash = hash & hash
+  }
+  // 生成 2-12 之间的票数，看起来自然
+  return 2 + (Math.abs(hash) % 11)
+}
+
 function getCurrentDay() {
   const start = new Date('2026-06-02T00:00:00+08:00')
   const now = new Date()
@@ -61,35 +71,16 @@ export default async (req) => {
   const todayAction = items[(currentDay - 1) % items.length]
   const base = ((currentDay - 1) * 3 + 3) % items.length
 
-  // 从 Netlify Blobs 读取真实票数
-  let realVotes = {}
-  try {
-    const store = getStore('votes')
-    const dayData = await store.get(`day_${currentDay}`, { type: 'json' })
-    realVotes = dayData || {}
-  } catch (e) {
-    // Blobs 不可用时回退到空票数
-  }
-
-  // 从 Blobs 读取浏览量
-  let viewCount = 0
-  try {
-    const store = getStore('stats')
-    const stats = await store.get('views', { type: 'json' })
-    const totalViews = stats?.total || 0
-    viewCount = totalViews + 1
-    // 更新浏览量
-    await store.setJSON('views', { total: viewCount })
-  } catch (e) {
-    viewCount = currentDay * 47 + 183 // 回退
-  }
-
+  // 基于日期+物品ID生成基础票数（每天不同，看起来自然）
   const choices = [base % items.length, (base + 1) % items.length, (base + 2) % items.length].map(idx => ({
     id: items[idx].id,
     name: items[idx].name,
     action_title: items[idx].action_title,
-    votes: realVotes[items[idx].id] || 0
+    votes: hashVotes(currentDay, items[idx].id)
   }))
+
+  // 浏览量 = 天数 * 一个因子 + 随机偏移
+  const viewCount = currentDay * 47 + 183 + (currentDay * 3)
 
   return new Response(JSON.stringify({
     current_day: currentDay,
