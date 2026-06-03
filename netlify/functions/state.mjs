@@ -58,6 +58,15 @@ async function safeGetJSON(store, key, fallback) {
   }
 }
 
+// 垃圾内容检测
+function isSpam(content) {
+  const trimmed = (content || '').trim()
+  if (trimmed.length < 10) return true
+  const uniqueChars = new Set(trimmed.replace(/\s/g, '')).size
+  if (uniqueChars <= 3 && trimmed.length > 15) return true
+  return false
+}
+
 export default async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -135,6 +144,8 @@ export default async (req) => {
         const store = getStore("deprivation", { consistency: "strong" })
         prevVotes = await safeGetJSON(store, `votes_day_${prevDay}`, {})
         prevConfs = await safeGetJSON(store, "user_confessions", [])
+        // 过滤掉垃圾告解
+        prevConfs = prevConfs.filter(c => !isSpam(c.content))
       } catch { /* 静默回退 */ }
     }
 

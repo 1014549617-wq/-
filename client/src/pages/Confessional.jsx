@@ -57,53 +57,43 @@ export default function Confessional() {
   // 加载模糊预览（未交出秘密前）
   const loadPreview = async () => {
     try {
-      const res = await fetch('/api/confessions?random=8')
+      const res = await fetch('/api/confessions')
       const data = await res.json()
-      setPreviewItems((data.confessions || []).map(item => ({
-        ...item,
-        preview: generatePreview(item.content)
-      })))
+      const items = data.confessions || []
+      if (items.length > 0) {
+        setPreviewItems(items.slice(0, 6).map(item => ({
+          ...item,
+          preview: generatePreview(item.content)
+        })))
+      } else {
+        // 还没有人提交过，显示占位
+        setPreviewItems([{
+          id: 'empty',
+          content: '还没有人交出过秘密。成为第一个？',
+          preview: '█████████████████████████',
+          time: '--:--'
+        }])
+      }
     } catch {
-      const seeds = getSeedConfessions()
-      const shuffled = seeds.sort(() => Math.random() - 0.5).slice(0, 6)
-      setPreviewItems(shuffled.map((content, i) => ({
-        id: Date.now() + i,
-        content,
-        preview: generatePreview(content),
-        time: `${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`
-      })))
+      setPreviewItems([{
+        id: 'err',
+        content: '信号中断。等待恢复...',
+        preview: '██████ 信号中断 ██████',
+        time: '--:--'
+      }])
     }
   }
 
-  // 加载完整告解墙
+  // 加载完整告解墙（真人告解）
   const loadWall = async () => {
     try {
-      const res = await fetch('/api/confessions?random=8')
+      const res = await fetch('/api/confessions')
       const data = await res.json()
       setWallItems(data.confessions || [])
     } catch {
-      const seeds = getSeedConfessions()
-      const shuffled = seeds.sort(() => Math.random() - 0.5).slice(0, 8)
-      setWallItems(shuffled.map((content, i) => ({
-        id: Date.now() + i,
-        content,
-        time: `${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`
-      })))
+      setWallItems([])
     }
   }
-
-  const getSeedConfessions = () => [
-    '我花了三小时盯着墙壁上的裂缝，想象那是一扇门。没有人会打开它，但光是想象那个可能性，就够我撑过今晚。',
-    '今天第一次没有化妆出门。地铁上没有人看我。我突然意识到，我以前害怕的不是"被看"，而是"不被看见"。',
-    '凌晨三点对着空荡荡的房间说了声"你好"。没有人回应。但我突然觉得，沉默也是一种回答。',
-    '我在公司的洗手间里哭过。不止一次。每次都是打开水龙头，让水流声盖住所有动静。然后补妆，回工位，像什么都没发生。',
-    '分手三年了，我每个月还是会翻一次她的朋友圈。不是为了怀念，是为了确认她过得比我好。',
-    '我把所有聊天记录都备份了。深夜会搜索"对不起"和"我错了"，看看这些年我对谁说过最多。结果发现，对自己说得最多。',
-    '有人问我还好吗，我说还好。有人说想我了，我说我也是。全是假的。但假久了以后我分不清哪次是真的了，连对自己我都开始说谎。',
-    '做梦的时候我总是在跑。不是被追，是朝着某个看不见的东西跑。我怀疑我在梦里比在现实里更诚实——至少在梦里我知道自己在逃。',
-    '洗澡的时候故意用很烫的水。不是因为舒服，是因为只有痛觉能让我确认自己还在这个身体里。',
-    '我从来不让别人来我家。不是因为乱，是因为这里是我唯一能卸下一切的地方。如果有人看到了我独处时的样子，那我就真的无处可藏了。',
-  ]
 
   const handleSubmit = async () => {
     if (confession.trim().length < 30) return
@@ -219,27 +209,31 @@ export default function Confessional() {
         {/* ========== 告解墙：完整版（已交出秘密） ========== */}
         {hasAuthority && (
           <div className="space-y-3">
-            <div className="font-pixel text-[7px] text-phosphorGreen/40 tracking-widest uppercase">// 他人告解 · 随机抽样 //</div>
+            <div className="flex items-center justify-between">
+              <div className="font-pixel text-[7px] text-phosphorGreen/70 tracking-widest uppercase crt-glow">// 他人告解 · 真人提交 //</div>
+              <div className="font-pixel text-[6px] text-phosphorGreen/50">{wallItems.length} 条秘密</div>
+            </div>
 
             {wallItems.map((item, idx) => (
               <div
                 key={item.id}
-                className="border border-phosphorGreen/15 bg-monitorGlass/30 p-3 md:p-4 rounded darkroom-reveal"
+                className="border border-phosphorGreen/30 bg-monitorGlass/50 p-3 md:p-4 rounded darkroom-reveal hover:border-phosphorGreen/50 transition-colors"
                 style={{ animationDelay: `${idx * 0.6}s` }}
               >
-                <p className="text-sm md:text-base text-textWhite/70 leading-relaxed indent-6">
+                <p className="text-sm md:text-base text-textWhite/85 leading-relaxed indent-6">
                   {item.content}
                 </p>
-                <div className="mt-3 flex justify-between font-pixel text-[7px] text-phosphorGreen/20">
-                  <span>ANON_#{String(typeof item.id === 'number' ? item.id : idx + 1).padStart(4, '0')}</span>
+                <div className="mt-3 flex justify-between font-pixel text-[7px] text-phosphorGreen/40">
+                  <span>ANON_#{String(item.id).slice(-6)}</span>
                   <span>{item.time}</span>
                 </div>
               </div>
             ))}
 
             {wallItems.length === 0 && (
-              <div className="font-pixel text-[8px] text-phosphorGreen/20 text-center py-8">
-                [ 暂无告解记录 ]
+              <div className="border border-phosphorGreen/20 bg-monitorGlass/30 p-6 md:p-8 rounded text-center space-y-3">
+                <div className="font-pixel text-[8px] text-phosphorGreen/50">[ 暂无告解记录 ]</div>
+                <div className="text-xs text-textWhite/30">暗房里还没有人交出过秘密。<br />成为第一个剖白者。</div>
               </div>
             )}
           </div>
@@ -249,8 +243,8 @@ export default function Confessional() {
         {!hasAuthority && previewItems.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="font-pixel text-[7px] text-phosphorGreen/30 tracking-widest uppercase">// 窥视预览 · 磨砂玻璃 //</div>
-              <div className="font-pixel text-[6px] text-alertRed/40">🔒 交出秘密以解锁</div>
+              <div className="font-pixel text-[7px] text-phosphorGreen/50 tracking-widest uppercase">// 窥视预览 · 磨砂玻璃 //</div>
+              <div className="font-pixel text-[6px] text-alertRed/50">🔒 交出秘密以解锁</div>
             </div>
 
             {previewItems.map((item, idx) => (
