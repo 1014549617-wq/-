@@ -76,8 +76,6 @@ export default async (req) => {
   }
 
   const currentDay = getCurrentDay()
-  const unlocked = items.slice(0, Math.min(currentDay, items.length))
-  const todayAction = items[(currentDay - 1) % items.length]
   const base = ((currentDay - 1) * 3 + 3) % items.length
   const choiceIds = [base % items.length, (base + 1) % items.length, (base + 2) % items.length]
 
@@ -85,9 +83,10 @@ export default async (req) => {
   let votesData = {}
   let viewCount = 0
   let blobsAvailable = false
+  let store = null
 
   try {
-    const store = getStore("deprivation", { consistency: "strong" })
+    store = getStore("deprivation", { consistency: "strong" })
     votesData = await safeGetJSON(store, `votes_day_${currentDay}`, {})
     viewCount = await safeGetJSON(store, "view_count", 0)
     // 每次访问 +1
@@ -96,6 +95,51 @@ export default async (req) => {
     blobsAvailable = true
   } catch (e) {
     // Blobs 不可用，使用确定性哈希回退
+  }
+
+  // 计算某一天的投票获胜者
+  async function getDayWinner(day) {
+    const dayBase = ((day - 1) * 3 + 3) % items.length
+    const dayChoiceIds = [dayBase % items.length, (dayBase + 1) % items.length, (dayBase + 2) % items.length]
+    const dayChoices = dayChoiceIds.map(idx => items[idx])
+
+    let dayVotes = {}
+    if (store) {
+      dayVotes = await safeGetJSON(store, `votes_day_${day}`, {})
+    }
+
+    let winner = dayChoices[0]
+    let maxVotes = -1
+    for (const item of dayChoices) {
+      const v = dayVotes[item.id] || 0
+      if (v > maxVotes) {
+        maxVotes = v
+        winner = item
+      }
+    }
+    return winner
+  }
+
+  // 构建已解锁物品列表（基于历史投票结果，而非硬编码）
+  const unlocked = []
+  if (currentDay === 1) {
+    unlocked.push(items[0]) // 第一天默认 mirror
+  } else {
+    // 第一天始终默认 mirror 作为起始
+    unlocked.push(items[0])
+    // 之后每一天的解锁物品 = 前一天的投票获胜者
+    for (let d = 1; d < currentDay; d++) {
+      const winner = await getDayWinner(d)
+      if (winner.id !== items[0].id) {
+        unlocked.push(winner)
+      }
+    }
+  }
+
+  // 今日行动 = 昨天投票的获胜者（第一天默认 mirror）
+  let todayAction = items[0]
+  if (currentDay > 1) {
+    todayAction = await getDayWinner(currentDay - 1)
   }
 
   // 构建 choices
