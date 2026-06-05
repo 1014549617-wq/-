@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { playEnter } from '../sound'
 
 export default function Entrance() {
   const navigate = useNavigate()
@@ -42,6 +43,7 @@ export default function Entrance() {
 
   // 已同意后延迟跳转（带信号中断转场）
   const handleEnter = () => {
+    playEnter()
     setPhase(2)
     setShowGlitch(true)
     setTimeout(() => {

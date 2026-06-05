@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { playClick, playConfirm } from '../sound'
 import itemIcons from '../itemIcons'
 
 export default function Monitor() {
@@ -93,6 +94,7 @@ export default function Monitor() {
 
   const startGaze = (choiceId) => {
     if (voted || gazing) return
+    playClick()
     setGazeTarget(choiceId)
     setGazing(true)
     setGazeTimer(5)
@@ -151,6 +153,7 @@ export default function Monitor() {
   }
 
   const confirmExecution = () => {
+    playConfirm()
     const today = getLocalDate()
     localStorage.setItem('executed_day', today)
     const archive = JSON.parse(localStorage.getItem('execution_archive') || '{}')
