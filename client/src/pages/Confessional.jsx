@@ -9,14 +9,14 @@ export default function Confessional() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [clock, setClock] = useState('')
+  const [archiveOpen, setArchiveOpen] = useState(false)
+  const [executionArchive, setExecutionArchive] = useState([])
 
-  // 获取本地日期字符串（避免 UTC 时区 bug）
   const getLocalDate = () => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
   }
 
-  // 实时时钟
   useEffect(() => {
     const tick = () => {
       const now = new Date()
@@ -30,11 +30,10 @@ export default function Confessional() {
     return () => clearInterval(t)
   }, [])
 
-  // 生成模糊预览文字（给未提交者看的磨砂玻璃效果）
+  // 生成模糊预览
   const generatePreview = (text) => {
     const chars = text.split('')
     const revealed = new Set()
-    // 只露 20% 的字
     const count = Math.max(3, Math.floor(chars.length * 0.2))
     while (revealed.size < count) {
       revealed.add(Math.floor(Math.random() * chars.length))
@@ -42,7 +41,16 @@ export default function Confessional() {
     return chars.map((c, i) => revealed.has(i) ? c : '█').join('')
   }
 
-  // 检查今日权限 + 加载预览
+  // 加载执行档案
+  useEffect(() => {
+    const archive = JSON.parse(localStorage.getItem('execution_archive') || '{}')
+    const entries = Object.entries(archive)
+      .map(([day, data]) => ({ day: parseInt(day), ...data }))
+      .sort((a, b) => b.day - a.day)
+    setExecutionArchive(entries)
+  }, [])
+
+  // 检查今日权限
   useEffect(() => {
     const today = getLocalDate()
     const authorityDate = localStorage.getItem('has_authority_date')
@@ -54,7 +62,6 @@ export default function Confessional() {
     }
   }, [])
 
-  // 加载模糊预览（未交出秘密前）
   const loadPreview = async () => {
     try {
       const res = await fetch('/api/confessions')
@@ -66,7 +73,6 @@ export default function Confessional() {
           preview: generatePreview(item.content)
         })))
       } else {
-        // 还没有人提交过，显示占位
         setPreviewItems([{
           id: 'empty',
           content: '还没有人交出过秘密。成为第一个？',
@@ -84,7 +90,6 @@ export default function Confessional() {
     }
   }
 
-  // 加载完整告解墙（真人告解）
   const loadWall = async () => {
     try {
       const res = await fetch('/api/confessions')
@@ -105,19 +110,16 @@ export default function Confessional() {
         body: JSON.stringify({ content: confession.trim() })
       })
       const data = await res.json()
-      // 如果后端返回了更新后的告解列表，直接用
       if (data.confessions) {
         setWallItems(data.confessions)
       }
-    } catch { /* 静默 */ }
-
+    } catch {}
     const today = getLocalDate()
     localStorage.setItem('has_authority_date', today)
     localStorage.setItem('my_last_confession', confession.trim())
     setHasAuthority(true)
     setSubmitted(true)
     setSubmitting(false)
-    // 延迟刷新确保 Blobs 一致性
     setTimeout(() => loadWall(), 1500)
   }
 
@@ -126,10 +128,8 @@ export default function Confessional() {
 
   return (
     <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden">
-      {/* 噪点 */}
       <div className="monitor-grain" />
 
-      {/* 顶部状态栏 */}
       <header className="p-3 md:p-4 border-b border-phosphorGreen/30 flex flex-wrap justify-between items-center font-pixel text-[7px] md:text-[8px] text-phosphorGreen gap-2">
         <div>SYS: ACTIVE // DARKROOM</div>
         <div className="flex items-center gap-2">
@@ -140,13 +140,11 @@ export default function Confessional() {
       </header>
 
       <main className="max-w-3xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
-        {/* 导航 */}
         <div className="flex items-center gap-4 font-pixel text-[7px] text-phosphorGreen/40">
           <Link to="/monitor" className="hover:text-phosphorGreen transition-colors">← 监视器</Link>
           <span className="tracking-[0.2em] uppercase">// The Darkroom //</span>
         </div>
 
-        {/* 规则说明 */}
         <div className="border border-phosphorGreen/20 bg-monitorGlass/30 p-3 md:p-4 rounded space-y-2">
           <div className="font-pixel text-[8px] text-phosphorGreen uppercase tracking-[0.2em]">// 等价交换法则 //</div>
           <p className="text-sm md:text-base text-textWhite/50 leading-relaxed">
@@ -155,7 +153,6 @@ export default function Confessional() {
           </p>
         </div>
 
-        {/* 告解输入区 */}
         {!hasAuthority ? (
           <div className="border border-phosphorGreen/30 bg-monitorGlass/50 p-4 md:p-5 rounded space-y-4">
             <div className="font-pixel text-[8px] text-phosphorGreen/40 tracking-widest">[ 交出你的秘密 ]</div>
@@ -170,25 +167,24 @@ export default function Confessional() {
             <div className="flex items-center justify-between">
               <div className="font-pixel text-[7px] text-phosphorGreen/30">
                 {charCount < 30
-                  ? `筹码不足 · 还需 ${30 - charCount} 字`
+                  ? '筹码不足 · 还需 ' + (30 - charCount) + ' 字'
                   : '筹码充足 · 可以提交'}
               </div>
               <button
                 onClick={handleSubmit}
                 disabled={charCount < 30 || submitting}
-                className={`font-pixel text-[8px] px-5 py-2 tracking-[0.2em] uppercase border rounded transition-all duration-300
-                  ${charCount >= 30
-                    ? 'border-phosphorGreen/50 text-phosphorGreen hover:bg-phosphorGreen/10 hover:shadow-[0_0_20px_rgba(74,107,82,0.2)]'
-                    : 'border-phosphorGreen/10 text-phosphorGreen/20 cursor-not-allowed'}`}
+                className={'font-pixel text-[8px] px-5 py-2 tracking-[0.2em] uppercase border rounded transition-all duration-300 '
+                  + (charCount >= 30
+                    ? 'border-phosphorGreen/50 text-phosphorGreen hover:bg-phosphorGreen/10 hover:shadow-[0_0_20px_rgba(90,143,106,0.2)]'
+                    : 'border-phosphorGreen/10 text-phosphorGreen/20 cursor-not-allowed')}
               >
                 {submitting ? '提交中...' : '等价交换'}
               </button>
             </div>
-            {/* 字数进度条 */}
             <div className="w-full h-[2px] bg-phosphorGreen/10 rounded">
               <div
-                className={`h-full rounded transition-all duration-300 ${charCount >= 30 ? 'bg-phosphorGreen/50' : 'bg-phosphorGreen/20'}`}
-                style={{ width: `${progress}%` }}
+                className={'h-full rounded transition-all duration-300 ' + (charCount >= 30 ? 'bg-phosphorGreen/50' : 'bg-phosphorGreen/20')}
+                style={{ width: progress + '%' }}
               />
             </div>
           </div>
@@ -206,19 +202,17 @@ export default function Confessional() {
           </div>
         )}
 
-        {/* ========== 告解墙：完整版（已交出秘密） ========== */}
         {hasAuthority && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="font-pixel text-[7px] text-phosphorGreen/70 tracking-widest uppercase crt-glow">// 他人告解 · 真人提交 //</div>
               <div className="font-pixel text-[6px] text-phosphorGreen/50">{wallItems.length} 条秘密</div>
             </div>
-
             {wallItems.map((item, idx) => (
               <div
                 key={item.id}
                 className="border border-phosphorGreen/30 bg-monitorGlass/50 p-3 md:p-4 rounded darkroom-reveal hover:border-phosphorGreen/50 transition-colors"
-                style={{ animationDelay: `${idx * 0.6}s` }}
+                style={{ animationDelay: idx * 0.6 + 's' }}
               >
                 <p className="text-sm md:text-base text-textWhite/85 leading-relaxed indent-6">
                   {item.content}
@@ -229,7 +223,6 @@ export default function Confessional() {
                 </div>
               </div>
             ))}
-
             {wallItems.length === 0 && (
               <div className="border border-phosphorGreen/20 bg-monitorGlass/30 p-6 md:p-8 rounded text-center space-y-3">
                 <div className="font-pixel text-[8px] text-phosphorGreen/50">[ 暂无告解记录 ]</div>
@@ -239,21 +232,18 @@ export default function Confessional() {
           </div>
         )}
 
-        {/* ========== 窥视预览：磨砂玻璃（未交出秘密） ========== */}
         {!hasAuthority && previewItems.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="font-pixel text-[7px] text-phosphorGreen/50 tracking-widest uppercase">// 窥视预览 · 磨砂玻璃 //</div>
               <div className="font-pixel text-[6px] text-alertRed/50">🔒 交出秘密以解锁</div>
             </div>
-
             {previewItems.map((item, idx) => (
               <div
                 key={item.id}
                 className="border border-phosphorGreen/10 bg-monitorGlass/20 p-3 md:p-4 rounded relative overflow-hidden"
-                style={{ animationDelay: `${idx * 0.4}s` }}
+                style={{ animationDelay: idx * 0.4 + 's' }}
               >
-                {/* 磨砂模糊覆盖 */}
                 <div className="absolute inset-0 bg-monitorBg/60 backdrop-blur-[3px] z-10 flex items-center justify-center">
                   <div className="font-pixel text-[7px] text-phosphorGreen/20 tracking-widest text-center px-4">
                     ██████ 交出你的秘密 ██████
@@ -271,7 +261,6 @@ export default function Confessional() {
           </div>
         )}
 
-        {/* 自己的最后一条告解 */}
         {localStorage.getItem('my_last_confession') && (
           <div className="border border-alertRed/20 bg-monitorGlass/30 p-3 md:p-4 rounded space-y-2">
             <div className="font-pixel text-[7px] text-alertRed/40 tracking-widest uppercase">// 你最后的告解 //</div>
@@ -280,6 +269,37 @@ export default function Confessional() {
             </p>
           </div>
         )}
+
+        {/* ===== 执行档案 ===== */}
+        {executionArchive.length > 0 && (
+          <section className="border border-phosphorGreen/20 bg-monitorGlass/30 rounded overflow-hidden">
+            <button
+              onClick={() => setArchiveOpen(!archiveOpen)}
+              className="w-full p-3 md:p-4 flex items-center justify-between hover:bg-monitorGlass/20 transition-colors"
+            >
+              <div className="font-pixel text-[7px] text-phosphorGreen/60 uppercase tracking-[0.2em] crt-glow">
+                // 执行档案 {archiveOpen ? '▲' : '▼'} //
+              </div>
+              <div className="font-pixel text-[6px] text-phosphorGreen/40">
+                {executionArchive.filter(e => e.executed).length} / {Math.max(...executionArchive.map(e => e.day), 1)} 天
+              </div>
+            </button>
+            {archiveOpen && (
+              <div className="border-t border-phosphorGreen/15 p-3 md:p-4 space-y-2">
+                {executionArchive.map(entry => (
+                  <div key={entry.day} className="flex items-center gap-3 font-pixel text-[7px]">
+                    <span className="text-phosphorGreen/40 w-16 shrink-0">DAY {String(entry.day).padStart(3, '0')}</span>
+                    <span className="text-textWhite/50 flex-1 truncate">{entry.action_title}</span>
+                    <span className={entry.executed ? 'text-phosphorGreen/70 crt-glow' : 'text-textWhite/20'}>
+                      {entry.executed ? '✓' : '✗'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
       </main>
     </div>
   )
