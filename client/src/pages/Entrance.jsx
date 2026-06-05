@@ -7,7 +7,7 @@ export default function Entrance() {
   const [countdown, setCountdown] = useState(3)
   const [typedText, setTypedText] = useState('')
   const [showGlitch, setShowGlitch] = useState(false)
-  const fullText = '你即将进入一个被监控的空间。在这里，你没有名字，没有身份，只有被剥去伪装后赤裸的存在。每过一天，一件新物品将坠入房间；每过一天，你必须交出部分自由。没有人会记住你来过——除非你自己选择留下痕迹。'
+  const fullText = '你即将进入一个被监控的空间。在这里，你没有名字，没有身份。每过一天，一件新物品将坠入房间；每过一天，你必须交出部分自由。没有人会记住你来过——除非你自己选择留下痕迹。'
 
   // 倒计时阶段
   useEffect(() => {
