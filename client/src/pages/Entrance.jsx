@@ -51,7 +51,7 @@ export default function Entrance() {
   }
 
   return (
-    <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden flex items-start pt-20 md:items-center md:pt-0 justify-center">
+    <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden flex items-center justify-center">
       {/* 噪点层 */}
       <div className="monitor-grain" />
 
@@ -90,7 +90,7 @@ export default function Entrance() {
 
       {/* === 阶段 1：契约显示 === */}
       {phase === 1 && (
-        <div className="relative z-10 max-w-xl px-8 text-center space-y-10 fade-in-up">
+        <div className="relative z-10 max-w-xl px-8 text-center space-y-10 fade-in-up -mt-16 md:mt-0">
           {/* 标题 */}
           <div className="space-y-4">
             <div className="font-pixel text-[8px] tracking-[0.4em] text-phosphorGreen/40 uppercase">
