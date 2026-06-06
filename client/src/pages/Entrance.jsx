@@ -51,7 +51,7 @@ export default function Entrance() {
   }
 
   return (
-    <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-monitorBg text-textWhite font-terminal relative overflow-hidden flex items-start pt-20 md:items-center md:pt-0 justify-center">
       {/* 噪点层 */}
       <div className="monitor-grain" />
 
