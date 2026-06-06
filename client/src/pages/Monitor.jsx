@@ -197,28 +197,50 @@ export default function Monitor() {
 
       <main className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
 
-        {/* 核心监控视窗 */}
+        {/* 核心监控视窗 —— 只展示今日坠入物品 */}
         <div id="monitor-view" className="scanlines w-full h-56 md:h-80 bg-monitorGlass border border-phosphorGreen/50 rounded relative flex items-center justify-center overflow-hidden">
-          <div id="items-layer" className="absolute inset-0 opacity-80 flex items-end justify-center gap-4 md:gap-8 pb-6 md:pb-8 flex-wrap px-2">
-            {items.map((item, idx) => (
-              <div key={item.id} className="flex flex-col items-center gap-1 fade-in-up" style={{ animationDelay: idx * 0.3 + 's' }}>
-                {itemIcons[item.slug] || (
-                  <div className="w-10 h-10 md:w-12 md:h-12 border border-phosphorGreen/50 rounded flex items-center justify-center font-pixel text-[6px] md:text-[7px] text-phosphorGreen/70">
-                    {item.slug ? item.slug.slice(0, 3).toUpperCase() : '???'}
+          {/* 今日物品（只显示最新一件） */}
+          <div className="flex flex-col items-center justify-center gap-3 px-4">
+            {items.length > 0 ? (() => {
+              const todayItem = items[items.length - 1]
+              return (
+                <div key={todayItem.id} className="flex flex-col items-center gap-2 drop-settle">
+                  <div className="drop-icon">
+                    {itemIcons[todayItem.slug] || (
+                      <div className="w-14 h-14 md:w-20 md:h-20 border border-phosphorGreen/50 rounded flex items-center justify-center font-pixel text-[10px] md:text-[12px] text-phosphorGreen/70">
+                        {todayItem.slug ? todayItem.slug.slice(0, 3).toUpperCase() : '???'}
+                      </div>
+                    )}
                   </div>
-                )}
-                <span className="font-pixel text-[6px] md:text-[7px] text-phosphorGreen/60">{item.name}</span>
-              </div>
-            ))}
-            {items.length === 0 && (
+                  <span className="font-pixel text-[8px] md:text-[9px] text-phosphorGreen/70 drop-name text-center">
+                    {todayItem.name}
+                  </span>
+                </div>
+              )
+            })() : (
               <div className="font-pixel text-[8px] text-phosphorGreen/40">[ 房间为空 · 等待第一件物品坠入 ]</div>
             )}
           </div>
+
+          {/* 右上角天数 */}
           <div className="absolute top-2 md:top-3 right-3 md:right-4 font-pixel text-[6px] md:text-[7px] text-phosphorGreen/80 crt-glow">
             DAY_{String(currentDay).padStart(3, '0')}
           </div>
+
+          {/* 左下角：今日坠入标签 */}
           <div className="absolute bottom-2 md:bottom-3 left-3 md:left-4 font-pixel text-[6px] md:text-[7px] text-phosphorGreen/60">
-            ITEMS: {items.length}
+            {items.length > 0 ? (
+              <span className="border border-phosphorGreen/30 px-1.5 py-0.5 rounded text-phosphorGreen/70">
+                今日坠入
+              </span>
+            ) : (
+              <span>ITEMS: 0</span>
+            )}
+          </div>
+
+          {/* 右下角：累计数 */}
+          <div className="absolute bottom-2 md:bottom-3 right-3 md:right-4 font-pixel text-[6px] md:text-[7px] text-phosphorGreen/40">
+            COLLECTED: {items.length}
           </div>
         </div>
 
