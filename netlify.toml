@@ -1,8 +1,7 @@
 [build]
-  # 前端构建目录
+  # 预构建目录（跳过 Netlify 自动构建）
   publish = "client/dist"
-  # 构建命令
-  command = "cd client && npm install && npm run build"
+  command = ""
 
 [functions]
   # Netlify Functions 目录
