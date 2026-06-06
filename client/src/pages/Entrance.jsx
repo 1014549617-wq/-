@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { playEnter } from '../sound'
 
 export default function Entrance() {
   const navigate = useNavigate()
@@ -43,7 +42,6 @@ export default function Entrance() {
 
   // 已同意后延迟跳转（带信号中断转场）
   const handleEnter = () => {
-    playEnter()
     setPhase(2)
     setShowGlitch(true)
     setTimeout(() => {
@@ -64,10 +62,10 @@ export default function Entrance() {
         </div>
       )}
 
-      {/* 十字准星装饰 */}
+      {/* 十字准星装饰 —— 手机端缩小，桌面端保持原尺寸 */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <div className="w-[600px] h-[600px] border border-phosphorGreen/10 rounded-full" />
-        <div className="absolute w-[400px] h-[400px] border border-phosphorGreen/5 rounded-full" />
+        <div className="w-[280px] h-[280px] md:w-[600px] md:h-[600px] border border-phosphorGreen/10 rounded-full" />
+        <div className="absolute w-[180px] h-[180px] md:w-[400px] md:h-[400px] border border-phosphorGreen/5 rounded-full" />
         <div className="absolute w-px h-40 bg-phosphorGreen/10" />
         <div className="absolute h-px w-40 bg-phosphorGreen/10" />
       </div>

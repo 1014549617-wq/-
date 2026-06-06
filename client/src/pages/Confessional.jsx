@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { playSubmit } from '../sound'
 import { Link } from 'react-router-dom'
 
 export default function Confessional() {
@@ -103,7 +102,6 @@ export default function Confessional() {
 
   const handleSubmit = async () => {
     if (confession.trim().length < 30) return
-    playSubmit()
     setSubmitting(true)
     try {
       const res = await fetch('/api/confessions', {
