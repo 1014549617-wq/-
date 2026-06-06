@@ -2,8 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== Zpix 像素字体 ========== */
+@font-face {
+  font-family: 'Zpix';
+  src: url('/fonts/zpix.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ========== 全局字体 ========== */
 body {
+  font-family: 'Zpix', monospace;
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: unset;
 }

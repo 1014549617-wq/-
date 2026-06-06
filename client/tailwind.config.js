@@ -14,9 +14,9 @@ export default {
         textWhite: '#f0f0f0',
       },
       fontFamily: {
-        pixel: ['"Press Start 2P"', 'monospace'],
-        terminal: ['"VT323"', 'monospace'],
-        mono: ['"VT323"', '"Courier New"', 'Consolas', 'monospace'],
+        pixel: ['"Zpix"', 'monospace'],
+        terminal: ['"Zpix"', 'monospace'],
+        mono: ['"Zpix"', '"Courier New"', 'Consolas', 'monospace'],
       },
     },
   },
