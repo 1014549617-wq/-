@@ -62,12 +62,12 @@ export default function Entrance() {
         </div>
       )}
 
-      {/* 十字准星装饰 —— 手机端缩小，桌面端保持原尺寸 */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <div className="w-[280px] h-[280px] md:w-[600px] md:h-[600px] border border-phosphorGreen/10 rounded-full" />
-        <div className="absolute w-[180px] h-[180px] md:w-[400px] md:h-[400px] border border-phosphorGreen/5 rounded-full" />
-        <div className="absolute w-px h-40 bg-phosphorGreen/10" />
-        <div className="absolute h-px w-40 bg-phosphorGreen/10" />
+      {/* 十字准星装饰 —— 手机端极小，桌面端放大 */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
+        <div className="w-[160px] h-[160px] md:w-[600px] md:h-[600px] border border-phosphorGreen/8 rounded-full" />
+        <div className="absolute w-[100px] h-[100px] md:w-[400px] md:h-[400px] border border-phosphorGreen/4 rounded-full" />
+        <div className="absolute w-px h-16 md:h-40 bg-phosphorGreen/6" />
+        <div className="absolute h-px w-16 md:w-40 bg-phosphorGreen/6" />
       </div>
 
       {/* === 阶段 0：倒计时闸门 === */}
