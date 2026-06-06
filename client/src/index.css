@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========== Zpix 像素字体 ========== */
+/* ========== Zpix 像素字体（中文正文） ========== */
 @font-face {
   font-family: 'Zpix';
   src: url('/fonts/zpix.woff2') format('woff2'),
@@ -10,6 +10,15 @@
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+}
+
+/* ========== Press Start 2P 像素字体（数字/装饰英文，2.5KB子集） ========== */
+@font-face {
+  font-family: 'PixelDisplay';
+  src: url('/fonts/press-start-2p-subset.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
 }
 
 /* ========== 全局字体 ========== */

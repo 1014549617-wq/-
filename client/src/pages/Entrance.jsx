@@ -62,27 +62,27 @@ export default function Entrance() {
         </div>
       )}
 
-      {/* 十字准星装饰 —— 手机端极小，桌面端放大 */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
-        <div className="w-[160px] h-[160px] md:w-[600px] md:h-[600px] border border-phosphorGreen/8 rounded-full" />
-        <div className="absolute w-[100px] h-[100px] md:w-[400px] md:h-[400px] border border-phosphorGreen/4 rounded-full" />
-        <div className="absolute w-px h-16 md:h-40 bg-phosphorGreen/6" />
-        <div className="absolute h-px w-16 md:w-40 bg-phosphorGreen/6" />
+      {/* 十字准星装饰 —— 仅桌面端显示，手机端隐藏 */}
+      <div className="hidden md:flex absolute inset-0 pointer-events-none items-center justify-center z-0">
+        <div className="w-[600px] h-[600px] border border-phosphorGreen/10 rounded-full" />
+        <div className="absolute w-[400px] h-[400px] border border-phosphorGreen/5 rounded-full" />
+        <div className="absolute w-px h-40 bg-phosphorGreen/10" />
+        <div className="absolute h-px w-40 bg-phosphorGreen/10" />
       </div>
 
       {/* === 阶段 0：倒计时闸门 === */}
       {phase === 0 && (
         <div className="relative z-10 text-center fade-in-up">
-          <div className="font-pixel text-[7px] text-phosphorGreen/30 tracking-[0.5em] uppercase mb-8">
+          <div className="font-display text-[7px] text-phosphorGreen/30 tracking-[0.5em] uppercase mb-8">
             Access Protocol Initiated
           </div>
           <div className="relative">
             {/* 倒计时数字 - 色差抖动效果 */}
-            <span className="font-pixel text-[120px] md:text-[180px] text-alertRed/80 countdown-glitch leading-none">
+            <span className="font-display text-[120px] md:text-[180px] text-alertRed/80 countdown-glitch leading-none">
               {countdown > 0 ? countdown : ''}
             </span>
           </div>
-          <div className="font-pixel text-[7px] text-alertRed/40 tracking-[0.3em] uppercase mt-8 rec-pulse">
+          <div className="font-display text-[7px] text-alertRed/40 tracking-[0.3em] uppercase mt-8 rec-pulse">
             ◆ STANDBY ◆
           </div>
         </div>

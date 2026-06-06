@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         pixel: ['"Zpix"', 'monospace'],
         terminal: ['"Zpix"', 'monospace'],
+        display: ['"PixelDisplay"', 'monospace'],
         mono: ['"Zpix"', '"Courier New"', 'Consolas', 'monospace'],
       },
     },
