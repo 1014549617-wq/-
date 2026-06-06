@@ -252,7 +252,11 @@ export default async (req) => {
     yesterday_report: yesterdayReport
   }), {
     status: 200,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0'
+    }
   })
 }
 

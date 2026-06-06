@@ -39,7 +39,7 @@ export default function Monitor() {
   }, [])
 
   const loadState = () => {
-    fetch('/api/state')
+    fetch('/api/state?_=' + Date.now())
       .then(r => r.json())
       .then(data => {
         setCurrentDay(data.current_day)

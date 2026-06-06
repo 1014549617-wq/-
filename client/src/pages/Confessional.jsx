@@ -64,7 +64,7 @@ export default function Confessional() {
 
   const loadPreview = async () => {
     try {
-      const res = await fetch('/api/confessions')
+      const res = await fetch('/api/confessions?_=' + Date.now())
       const data = await res.json()
       const items = data.confessions || []
       if (items.length > 0) {
@@ -92,7 +92,7 @@ export default function Confessional() {
 
   const loadWall = async () => {
     try {
-      const res = await fetch('/api/confessions')
+      const res = await fetch('/api/confessions?_=' + Date.now())
       const data = await res.json()
       setWallItems(data.confessions || [])
     } catch {

@@ -79,7 +79,11 @@ export default async (req) => {
       blobs_available: blobsAvailable
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0'
+      }
     })
   }
 
